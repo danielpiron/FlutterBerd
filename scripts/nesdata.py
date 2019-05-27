@@ -5,6 +5,65 @@ import io
 import json
 import sys
 
+NES_PALETTE = [
+    (84, 84, 84),
+    (0, 30, 116),
+    (8, 16, 144),
+    (48, 0, 136),
+    (68, 0, 100),
+    (92, 0, 48),
+    (84, 4, 0),
+    (60, 24, 0),
+    (32, 42, 0),
+    (8, 58, 0),
+    (0, 64, 0),
+    (0, 60, 0),
+    (0, 50, 60),
+    (0, 0, 0),
+    (152, 150, 152),
+    (8, 76, 196),
+    (48, 50, 236),
+    (92, 30, 228),
+    (136, 20, 176),
+    (160, 20, 100),
+    (152, 34, 32),
+    (120, 60, 0),
+    (84, 90, 0),
+    (40, 114, 0),
+    (8, 124, 0),
+    (0, 118, 40),
+    (0, 102, 120),
+    (0, 0, 0),
+    (236, 238, 236),
+    (76, 154, 236),
+    (120, 124, 236),
+    (176, 98, 236),
+    (228, 84, 236),
+    (236, 88, 180),
+    (236, 106, 100),
+    (212, 136, 32),
+    (160, 170, 0),
+    (116, 196, 0),
+    (76, 208, 32),
+    (56, 204, 108),
+    (56, 180, 204),
+    (60, 60, 60),
+    (236, 238, 236),
+    (168, 204, 236),
+    (188, 188, 236),
+    (212, 178, 236),
+    (236, 174, 236),
+    (236, 174, 212),
+    (236, 180, 176),
+    (228, 196, 144),
+    (204, 210, 120),
+    (180, 222, 120),
+    (168, 226, 144),
+    (152, 226, 180),
+    (160, 214, 228),
+    (160, 162, 160)
+]
+
 
 def extract_nth_bits(row, bit=0):
     result = 0
@@ -32,7 +91,7 @@ def extract_8x8_tile_from_image(img, upperleft):
         tile = tile.convert('RGBA')
 
     transparency = (0, 0, 0, 0)
-    colors = [color for freq, color in tile.getcolors() if color != transparency]
+    colors = [color for _, color in tile.getcolors() if color != transparency]
 
     colormap = {}
     for mapped, original in enumerate([transparency] + sorted(colors)):
@@ -46,7 +105,28 @@ def extract_8x8_tile_from_image(img, upperleft):
             row.append(colormap[tile.getpixel((x, y))])
         bitmap.append(row)
 
-    return bitmap
+    colors = [color for color, _ in sorted(colormap.items(), key=lambda x: x[1])]
+
+    return bitmap, colors
+
+
+def closest_nes_color(color):
+
+    # Return 0x0f for the transparency color (based on convention in SMB)
+    if color == (0, 0, 0, 0):
+        return 0x0f 
+
+    rgb = (color[0], color[1], color[2])
+    color_diffs = [(abs(rgb[0] - nes_color[0]),
+                    abs(rgb[1] - nes_color[1]),
+                    abs(rgb[2] - nes_color[2]))
+                   for nes_color in NES_PALETTE]
+
+    return min(enumerate(color_diffs), key=lambda c: c[1])[0]
+
+
+def colors_as_nes_palette_values(colors):
+    return [closest_nes_color(c) for c in colors]
 
 
 def as_ca65_byte_definition(numbers):
@@ -62,8 +142,8 @@ if __name__ == '__main__':
         png_bytes = base64.decodebytes(encoded_data.encode())
         img = Image.open(io.BytesIO(png_bytes))
 
-        bitmap = extract_8x8_tile_from_image(img, (0, 0))
-        pp(bitmap)
+        bitmap, colors = extract_8x8_tile_from_image(img, (0, 0))
 
-        bitmap = extract_8x8_tile_from_image(img, (0, 8))
-        pp(bitmap)
+        print(as_ca65_byte_definition(colors_as_nes_palette_values(colors)))
+        print(as_ca65_byte_definition(bitmap_to_nes_tile(bitmap)))
+
