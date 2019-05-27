@@ -28,12 +28,14 @@ def extract_8x8_tile_from_image(img, upperleft):
 
     tile = img.crop((x1, y1, x2, y2))
 
-    transcolor = tile.info['transparency']
-    colors = [index for frequency, index
-              in tile.getcolors() if index != transcolor]
+    if tile.mode == 'P':
+        tile = tile.convert('RGBA')
+
+    transparency = (0, 0, 0, 0)
+    colors = [color for freq, color in tile.getcolors() if color != transparency]
 
     colormap = {}
-    for mapped, original in enumerate([transcolor] + sorted(colors)):
+    for mapped, original in enumerate([transparency] + sorted(colors)):
         colormap[original] = mapped
 
     bitmap = []
@@ -60,5 +62,8 @@ if __name__ == '__main__':
         png_bytes = base64.decodebytes(encoded_data.encode())
         img = Image.open(io.BytesIO(png_bytes))
 
-        pp(img)
+        bitmap = extract_8x8_tile_from_image(img, (0, 0))
+        pp(bitmap)
 
+        bitmap = extract_8x8_tile_from_image(img, (0, 8))
+        pp(bitmap)
