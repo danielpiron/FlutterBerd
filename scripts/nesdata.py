@@ -6,6 +6,7 @@ import json
 import sys
 
 NES_PALETTE = [
+# $00
     (84, 84, 84),
     (0, 30, 116),
     (8, 16, 144),
@@ -20,6 +21,10 @@ NES_PALETTE = [
     (0, 60, 0),
     (0, 50, 60),
     (0, 0, 0),
+# Black padding
+    (0, 0, 0),
+    (0, 0, 0),
+# $10
     (152, 150, 152),
     (8, 76, 196),
     (48, 50, 236),
@@ -34,6 +39,10 @@ NES_PALETTE = [
     (0, 118, 40),
     (0, 102, 120),
     (0, 0, 0),
+# Black padding
+    (0, 0, 0),
+    (0, 0, 0),
+# $20
     (236, 238, 236),
     (76, 154, 236),
     (120, 124, 236),
@@ -48,6 +57,10 @@ NES_PALETTE = [
     (56, 204, 108),
     (56, 180, 204),
     (60, 60, 60),
+# Black padding
+    (0, 0, 0),
+    (0, 0, 0),
+# $30
     (236, 238, 236),
     (168, 204, 236),
     (188, 188, 236),
@@ -61,7 +74,10 @@ NES_PALETTE = [
     (168, 226, 144),
     (152, 226, 180),
     (160, 214, 228),
-    (160, 162, 160)
+    (160, 162, 160),
+# Black padding
+    (0, 0, 0),
+    (0, 0, 0),
 ]
 
 
@@ -117,9 +133,9 @@ def closest_nes_color(color):
         return 0x0f 
 
     rgb = (color[0], color[1], color[2])
-    color_diffs = [(abs(rgb[0] - nes_color[0]),
-                    abs(rgb[1] - nes_color[1]),
-                    abs(rgb[2] - nes_color[2]))
+    color_diffs = [(rgb[0] - nes_color[0])**2 +
+                   (rgb[1] - nes_color[1])**2 +
+                   (rgb[2] - nes_color[2])**2
                    for nes_color in NES_PALETTE]
 
     return min(enumerate(color_diffs), key=lambda c: c[1])[0]
