@@ -97,21 +97,12 @@ def bitmap_to_nes_tile(bitmap):
         for row in bitmap:
             yield extract_nth_bits(row, bitplane)
 
-def extract_8x8_tile_from_image(img, upperleft):
+def extract_8x8_tile_from_image(img, upperleft, colormap):
     x1, y1 = upperleft
     x2, y2 = x1 + 8, y1 + 8
 
     tile = img.crop((x1, y1, x2, y2))
 
-    if tile.mode == 'P':
-        tile = tile.convert('RGBA')
-
-    transparency = (0, 0, 0, 0)
-    colors = [color for _, color in tile.getcolors() if color != transparency]
-
-    colormap = {}
-    for mapped, original in enumerate([transparency] + sorted(colors)):
-        colormap[original] = mapped
 
     bitmap = []
     width, height = tile.size
@@ -121,9 +112,18 @@ def extract_8x8_tile_from_image(img, upperleft):
             row.append(colormap[tile.getpixel((x, y))])
         bitmap.append(row)
 
-    colors = [color for color, _ in sorted(colormap.items(), key=lambda x: x[1])]
+    return bitmap
 
-    return bitmap, colors
+
+def build_image_colormap(img):
+    transparency = (0, 0, 0, 0)
+    colors = [color for _, color in img.getcolors() if color != transparency]
+
+    colormap = {}
+    for mapped, original in enumerate([transparency] + sorted(colors)):
+        colormap[original] = mapped
+
+    return colormap
 
 
 def closest_nes_color(color):
@@ -158,8 +158,17 @@ if __name__ == '__main__':
         png_bytes = base64.decodebytes(encoded_data.encode())
         img = Image.open(io.BytesIO(png_bytes))
 
-        bitmap, colors = extract_8x8_tile_from_image(img, (0, 0))
+        colormap = build_image_colormap(img)
+        colors = [color for color, _ in sorted(colormap.items(), key=lambda x: x[1])]
+
+        width, height = img.size
+        tiledata = []
+        for top in range(0, height, 8):
+            for left in range(0, width, 8):
+                bitmap = extract_8x8_tile_from_image(img, (left, top), colormap)
+                tiledata.append(bitmap)
 
         print(as_ca65_byte_definition(colors_as_nes_palette_values(colors)))
-        print(as_ca65_byte_definition(bitmap_to_nes_tile(bitmap)))
-
+        print(len(tiledata))
+        print('\n'.join(as_ca65_byte_definition(bitmap_to_nes_tile(bitmap))
+                        for bitmap in tiledata))
