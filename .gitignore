@@ -1,3 +1,4 @@
 *.deb
+src/*.inc
 *.nes
 *.o

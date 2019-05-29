@@ -150,8 +150,9 @@ def as_ca65_byte_definition(numbers):
 
 
 if __name__ == '__main__':
-    from pprint import pprint as pp
-    with open('../assets/FlutterBerd-Pipe.piskel', 'r') as fp:
+    infile = sys.argv[1]
+    outfile = sys.argv[2]
+    with open(infile, 'r') as fp:
         piskel = json.load(fp)
         layer = json.loads(piskel['piskel']['layers'][0])
         content_type, encoded_data = layer['chunks'][0]['base64PNG'].split(',')
@@ -168,7 +169,10 @@ if __name__ == '__main__':
                 bitmap = extract_8x8_tile_from_image(img, (left, top), colormap)
                 tiledata.append(bitmap)
 
-        print(as_ca65_byte_definition(colors_as_nes_palette_values(colors)))
-        print(len(tiledata))
-        print('\n'.join(as_ca65_byte_definition(bitmap_to_nes_tile(bitmap))
-                        for bitmap in tiledata))
+        with open(outfile, 'w') as out:
+            out.write('; {} tiles'.format(len(tiledata)))
+            out.write('\n')
+            out.write('; Palette - ' + as_ca65_byte_definition(colors_as_nes_palette_values(colors)))
+            out.write('\n')
+            out.write('\n'.join(as_ca65_byte_definition(bitmap_to_nes_tile(bitmap))
+                                for bitmap in tiledata))

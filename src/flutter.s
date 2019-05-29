@@ -25,27 +25,8 @@ INES_SRAM   = 0 ; 1 = battery backed SRAM at $6000-7FFF
 ; Sprite Tiles
 .res 8 * 2 * 256
 ; Background Tiles
-.res 8 * 2
-.byte $FF, $8B, $8B, $8B, $8B, $8B, $8B, $8B, $00, $7F, $7F, $7F, $7F, $7F, $7F, $7F
-.byte $FF, $CD, $CD, $CD, $CD, $CD, $CD, $CD, $00, $FF, $FF, $FF, $FF, $FF, $FF, $FF
-.byte $FF, $80, $80, $80, $80, $80, $80, $80, $00, $FF, $FF, $FF, $FF, $FF, $FF, $FF
-.byte $FF, $5F, $BF, $5F, $BF, $5F, $BF, $5F, $00, $A0, $40, $A0, $40, $A0, $40, $A0
-.byte $8B, $8B, $8B, $C5, $7F, $7F, $25, $25, $7F, $7F, $7F, $3F, $00, $00, $1F, $1F
-.byte $CD, $CD, $CD, $E6, $FF, $FF, $E6, $E6, $FF, $FF, $FF, $FF, $00, $00, $FF, $FF
-.byte $80, $80, $80, $81, $FF, $FF, $81, $80, $FF, $FF, $FF, $FE, $00, $00, $FE, $FF
-.byte $BF, $5F, $BF, $7F, $FE, $FE, $7C, $BC, $40, $A0, $40, $80, $00, $00, $80, $40
-.byte $25, $25, $25, $25, $25, $25, $25, $25, $1F, $1F, $1F, $1F, $1F, $1F, $1F, $1F
-.byte $E6, $E6, $E6, $E6, $E6, $E6, $E6, $E6, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
-.byte $81, $80, $81, $80, $81, $80, $81, $80, $FE, $FF, $FE, $FF, $FE, $FF, $FE, $FF
-.byte $7C, $BC, $7C, $BC, $7C, $BC, $7C, $BC, $80, $40, $80, $40, $80, $40, $80, $40
-.byte $25, $25, $7F, $7F, $C5, $8B, $8B, $8B, $1F, $1F, $00, $00, $3F, $7F, $7F, $7F
-.byte $E6, $E6, $FF, $FF, $E6, $CD, $CD, $CD, $FF, $FF, $00, $00, $FF, $FF, $FF, $FF
-.byte $81, $80, $FF, $FF, $81, $00, $00, $00, $FE, $FF, $00, $00, $FE, $FF, $FF, $FF
-.byte $7C, $BC, $FE, $FE, $7F, $BF, $5F, $BF, $80, $40, $00, $00, $80, $40, $A0, $40
-.byte $8B, $8B, $8B, $8B, $8B, $8B, $8B, $FF, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $00
-.byte $CD, $CD, $CD, $CD, $CD, $CD, $CD, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $00
-.byte $00, $00, $00, $00, $00, $00, $00, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $00
-.byte $5F, $BF, $5F, $BF, $5F, $BF, $5F, $FF, $A0, $40, $A0, $40, $A0, $40, $A0, $00
+.res 8 * 2 ; One blank tile at index 0
+.include "pipe.inc"
 .res 8 * 2 * (256 - 21)
 
 
@@ -174,6 +155,8 @@ main:
     adc #$20
     sta PPUADDR
 
+    ldx #$00
+@midpipe:
     ldy #$05
     sty PPUDATA
     ldy #$06
@@ -188,9 +171,10 @@ main:
     adc #$20
     sta PPUADDR
 
+    inx
+    cpx #$05
+    bne @midpipe
 
-    ldx #$00
-@midpipe:
     ldy #$09
     sty PPUDATA
     ldy #$0A
@@ -198,38 +182,6 @@ main:
     ldy #$0B
     sty PPUDATA
     ldy #$0C
-    sty PPUDATA
-
-    ldy #$20
-    sty PPUADDR
-    adc #$20
-    sta PPUADDR
-
-    inx
-    cpx #$04
-    bne @midpipe
-
-    ldy #$0D
-    sty PPUDATA
-    ldy #$0E
-    sty PPUDATA
-    ldy #$0F
-    sty PPUDATA
-    ldy #$10
-    sty PPUDATA
-
-    ldy #$21
-    sty PPUADDR
-    lda #$0A
-    sta PPUADDR
-
-    ldy #$11
-    sty PPUDATA
-    ldy #$12
-    sty PPUDATA
-    ldy #$13
-    sty PPUDATA
-    ldy #$14
     sty PPUDATA
 
     lda #$00
