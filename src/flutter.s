@@ -23,7 +23,8 @@ INES_SRAM   = 0 ; 1 = battery backed SRAM at $6000-7FFF
 
     .segment "TILES"
 ; Sprite Tiles
-.res 8 * 2 * 256
+.include "bird.inc"
+.res 8 * 2 * (256 - 16)
 ; Background Tiles
 .res 8 * 2 ; One blank tile at index 0
 .include "pipe.inc"
