@@ -118,6 +118,9 @@ PPUCTRLShadow: .res 1
 Center: .res 1
 GapRadius: .res 1
 
+NameTableHigh: .res 1
+NameTableLow: .res 1
+
     .segment "CODE"
 
 main:
@@ -148,10 +151,18 @@ main:
     sta z:PPUCTRLShadow
     sta PPUCTRL
 
-    bit PPUSTAT
     lda #$20
-    sta PPUADDR
+    sta z:NameTableHigh
     lda #$0A
+    sta z:NameTableLow
+
+    ldy #$00 ; Y indexes the segment of strip we are rendering (0-3)
+; Set starting address within nametable
+@RenderPipeStrip:
+    bit PPUSTAT
+    lda z:NameTableHigh
+    sta PPUADDR
+    lda z:NameTableLow
     sta PPUADDR
 
     sec
@@ -160,14 +171,14 @@ main:
     tax
     dex
 
-    lda PipeShaft
+    lda PipeShaft, y
 @topshaft:
     sta PPUDATA
     dex
     bne @topshaft
 
 ; Draw the 'bottom' cap
-    lda PipeBottomCap
+    lda PipeBottomCap, y
     sta PPUDATA
 
 ; Draw Gap
@@ -182,22 +193,29 @@ main:
     bne @gap
 
 ; Draw the 'top' cap
-    lda PipeTopCap
+    lda PipeTopCap, y
     sta PPUDATA
 
 ; Draw lower part of pipe
     sec
-    lda #30 ; NameTable is 30 tiles tall
-    sbc z:Center
-    sbc z:GapRadius
+    lda #30         ; NameTable is 30 tiles tall
+    sbc z:Center    ; Subtract Center point
+    sbc z:GapRadius ; and gap radius
     tax
-    dex
+    dex             ; Minus -1
 
-    lda PipeShaft
+    lda PipeShaft, y
 @bottomshaft:
     sta PPUDATA
     dex
     bne @bottomshaft
+
+    ; Unless we reach the right edge of the pipe, move onto
+    ; next strip
+    inc z:NameTableLow
+    iny
+    cpy #$04
+    bne @RenderPipeStrip
 
     lda #$00
     sta PPUSCRL
@@ -218,10 +236,10 @@ PipePalette:
 
 ; Pipe tile indices
 PipeShaft:
-.byte $05
+.byte $05, $06, $07, $08
 
 PipeBottomCap:
-.byte $09
+.byte $09, $0A, $0B, $0C
 
 PipeTopCap:
-.byte $01
+.byte $01, $02, $03, $04
