@@ -123,38 +123,10 @@ NameTableLow: .res 1
 
     .segment "CODE"
 
-main:
-
-    lda #$0F
-    sta z:Center
-    lda #$04
-    sta z:GapRadius
-
-    ; set first background
-    bit PPUSTAT
-    lda #$3F
-    sta PPUADDR
-    lda #$00
-    sta PPUADDR
-
-    ldx #$01
-    stx PPUDATA
-@l1:
-    lda PipePalette, x
-    sta $2007
-    inx
-    cpx #$04
-    bne @l1
-
+RenderPipe:
     lda z:PPUCTRLShadow
-    ora #%00000100
-    sta z:PPUCTRLShadow
+    ora #%00000100 ; Set vertical increment mode
     sta PPUCTRL
-
-    lda #$20
-    sta z:NameTableHigh
-    lda #$0A
-    sta z:NameTableLow
 
     ldy #$00 ; Y indexes the segment of strip we are rendering (0-3)
 ; Set starting address within nametable
@@ -216,6 +188,43 @@ main:
     iny
     cpy #$04
     bne @RenderPipeStrip
+
+    ; We do not change PPUCTRLShadow
+    ; So we can restore PPUCTRL from here
+    lda z:PPUCTRLShadow
+    sta PPUCTRL
+
+    rts
+; Ends RenderPipe
+
+main:
+    ; set first background
+    bit PPUSTAT
+    lda #$3F
+    sta PPUADDR
+    lda #$00
+    sta PPUADDR
+
+    ldx #$01
+    stx PPUDATA
+@l1:
+    lda PipePalette, x
+    sta $2007
+    inx
+    cpx #$04
+    bne @l1
+
+    ; Pipe rendering parameters
+    lda #$0F
+    sta z:Center
+    lda #$04
+    sta z:GapRadius
+    lda #$20
+    sta z:NameTableHigh
+    lda #$0A
+    sta z:NameTableLow
+
+    jsr RenderPipe
 
     lda #$00
     sta PPUSCRL
