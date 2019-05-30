@@ -114,6 +114,7 @@ irq:
 
 
     .segment "ZEROPAGE"
+
 PPUCTRLShadow: .res 1
 Center: .res 1
 GapRadius: .res 1
@@ -121,8 +122,95 @@ GapRadius: .res 1
 NameTableHigh: .res 1
 NameTableLow: .res 1
 
+RNGSeed: .res 2       ; initialize 16-bit seed to any value except 0
+
+; Align play field data at a 16 byte boundary, so it's easier to visualize
+; with a hex editor.
+Padding: .res 9
+
+PlayFieldCenters: .res 16
+PlayFieldGapRadii: .res 16
+
     .segment "CODE"
 
+; PRNG - https://wiki.nesdev.com/w/index.php/Random_number_generator
+;
+; Returns a random 8-bit number in A (0-255), clobbers X (0).
+;
+; Requires a 2-byte value on the zero page called "seed".
+; Initialize seed to any value except 0 before the first call to prng.
+; (A seed value of 0 will cause prng to always return 0.)
+;
+; This is a 16-bit Galois linear feedback shift register with polynomial $002D.
+; The sequence of numbers it generates will repeat after 65535 calls.
+;
+; Execution time is an average of 125 cycles (excluding jsr and rts)
+
+PRNG:
+    ldx #8     ; iteration count (generates 8 bits)
+    lda RNGSeed+0
+:
+    asl        ; shift the register
+    rol RNGSeed+1
+    bcc :+
+    eor #$2D   ; apply XOR feedback whenever a 1 bit is shifted out
+:
+    dex
+    bne :--
+    sta RNGSeed+0
+    cmp #0     ; reload flags
+    rts
+
+InitPRNG:
+; Set a hard coded initial seed of 0510 (clobbers A)
+    lda #$05
+    sta RNGSeed+0
+    lda #$10
+    sta RNGSeed+1
+    rts
+
+InitPlayField:
+    lda #$FF
+    ldx #$00
+:   ; Set playfield values to 0xFF (no pipes)
+    sta PlayFieldCenters, x
+    sta PlayFieldGapRadii, x
+    inx
+    cpx #$10
+    bne :-
+
+    ; Use RNG to populate centers and radii
+    ldy #$08  ; Start at second screen
+:
+    jsr PRNG
+    tax ; Save random value in X
+    and #%00000011 ; Take lowest 2 bits (range 0-3)
+    clc
+    adc #02        ; Add two to make a 2-5 range for center
+    sta PlayFieldCenters, y
+
+    txa ; Restore the randomly generated value
+    lsr ; Get the higher nibble
+    lsr
+    lsr
+    lsr
+    and #%00000111 ; Take lowest 2 bits (range 0-7)
+    ; Not clearing the carry flag, because last add
+    ; couldn't have possibly set it.
+    adc #11        ; Makes a range (11-18)
+    sta PlayFieldGapRadii, y
+
+    iny    ; Skip a space
+    iny
+    cpy #$10
+    bcc :-
+
+    rts
+
+; RenderPipe
+; Draws upper and lower pipes (obstacles) starting at name table location specified by
+; NameTableLow and NameTableHigh. The gap and height are specified by GapRadius and
+; Center respectively. Destroys X, Y, A
 RenderPipe:
     lda z:PPUCTRLShadow
     ora #%00000100 ; Set vertical increment mode
@@ -213,6 +301,9 @@ main:
     inx
     cpx #$04
     bne @l1
+
+    jsr InitPRNG
+    jsr InitPlayField
 
     ; Pipe rendering parameters
     lda #$0F
