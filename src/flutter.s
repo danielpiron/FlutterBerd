@@ -160,14 +160,14 @@ main:
     tax
     dex
 
-    lda #$05
+    lda PipeShaft
 @topshaft:
     sta PPUDATA
     dex
     bne @topshaft
 
 ; Draw the 'bottom' cap
-    lda #$01
+    lda PipeBottomCap
     sta PPUDATA
 
 ; Draw Gap
@@ -182,7 +182,7 @@ main:
     bne @gap
 
 ; Draw the 'top' cap
-    lda #$09
+    lda PipeTopCap
     sta PPUDATA
 
 ; Draw lower part of pipe
@@ -193,7 +193,7 @@ main:
     tax
     dex
 
-    lda #$05
+    lda PipeShaft
 @bottomshaft:
     sta PPUDATA
     dex
@@ -215,3 +215,13 @@ main:
 
 PipePalette:
 .byte $0F, $0D, $1A, $20
+
+; Pipe tile indices
+PipeShaft:
+.byte $05
+
+PipeBottomCap:
+.byte $09
+
+PipeTopCap:
+.byte $01
