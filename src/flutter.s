@@ -88,6 +88,7 @@ reset:
 
     ;  Ready to initialize
     lda #%10010000
+    sta z:PPUCTRLShadow
     sta PPUCTRL
     jmp main
 
@@ -113,10 +114,18 @@ irq:
 
 
     .segment "ZEROPAGE"
+PPUCTRLShadow: .res 1
+Center: .res 1
+GapRadius: .res 1
 
     .segment "CODE"
 
 main:
+
+    lda #$0F
+    sta z:Center
+    lda #$04
+    sta z:GapRadius
 
     ; set first background
     bit PPUSTAT
@@ -134,56 +143,61 @@ main:
     cpx #$04
     bne @l1
 
-    ; Super manually draw a pipe
-    clc
+    lda z:PPUCTRLShadow
+    ora #%00000100
+    sta z:PPUCTRLShadow
+    sta PPUCTRL
+
     bit PPUSTAT
-    ldy #$20
-    sty PPUADDR
-    lda #$2A
+    lda #$20
+    sta PPUADDR
+    lda #$0A
     sta PPUADDR
 
-    ldy #01
-    sty PPUDATA
-    ldy #02
-    sty PPUDATA
-    ldy #03
-    sty PPUDATA
-    ldy #04
-    sty PPUDATA
+    sec
+    lda z:Center
+    sbc z:GapRadius
+    tax
+    dex
 
-    ldy #$20
-    sty PPUADDR
-    adc #$20
-    sta PPUADDR
+    lda #$05
+@topshaft:
+    sta PPUDATA
+    dex
+    bne @topshaft
 
-    ldx #$00
-@midpipe:
-    ldy #$05
-    sty PPUDATA
-    ldy #$06
-    sty PPUDATA
-    ldy #$07
-    sty PPUDATA
-    ldy #$08
-    sty PPUDATA
+; Draw the 'bottom' cap
+    lda #$01
+    sta PPUDATA
 
-    ldy #$20
-    sty PPUADDR
-    adc #$20
-    sta PPUADDR
+; Draw Gap
+    lda z:GapRadius
+    asl
+    tax ; X has GapRadius * 2
 
-    inx
-    cpx #$05
-    bne @midpipe
+    lda #$00
+@gap:
+    sta PPUDATA
+    dex
+    bne @gap
 
-    ldy #$09
-    sty PPUDATA
-    ldy #$0A
-    sty PPUDATA
-    ldy #$0B
-    sty PPUDATA
-    ldy #$0C
-    sty PPUDATA
+; Draw the 'top' cap
+    lda #$09
+    sta PPUDATA
+
+; Draw lower part of pipe
+    sec
+    lda #30 ; NameTable is 30 tiles tall
+    sbc z:Center
+    sbc z:GapRadius
+    tax
+    dex
+
+    lda #$05
+@bottomshaft:
+    sta PPUDATA
+    dex
+    bne @bottomshaft
 
     lda #$00
     sta PPUSCRL
