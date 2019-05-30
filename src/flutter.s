@@ -226,6 +226,18 @@ main:
 
     jsr RenderPipe
 
+    ; Pipe rendering parameters
+    lda #$0A
+    sta z:Center
+    lda #$03
+    sta z:GapRadius
+    lda #$20
+    sta z:NameTableHigh
+    lda #($0A + 8)
+    sta z:NameTableLow
+
+    jsr RenderPipe
+
     lda #$00
     sta PPUSCRL
     sta PPUSCRL
