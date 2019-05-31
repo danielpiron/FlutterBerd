@@ -174,7 +174,6 @@ ScrollPosition: .res 2
 FrameAddress: .res 2
 BirdCurrentFrame: .res 1
 BirdFrameCounter: .res 1
-BirdHeight: .res 1
 
 ; Align play field data at a 16 byte boundary, so it's easier to visualize
 ; with a hex editor.
@@ -182,6 +181,9 @@ Padding: .res 2
 
 PlayFieldCenters: .res 16
 PlayFieldGapRadii: .res 16
+
+BirdHeight: .res 2
+BirdVelocity: .res 2
 
     .segment "CODE"
 
@@ -372,6 +374,35 @@ RenderPipe:
 ;
 UpdateBird:
 
+    ; Apply gravity to Bird's Velocity
+    clc
+    lda z:BirdVelocity+0
+    adc #$20
+    sta z:BirdVelocity+0
+    lda z:BirdVelocity+1
+    adc #$00
+    sta z:BirdVelocity+1
+
+    clc ; Calcuate new position based on velocity
+    lda z:BirdHeight+0
+    adc z:BirdVelocity+0
+    sta z:BirdHeight+0
+    lda z:BirdHeight+1
+    adc z:BirdVelocity+1
+    sta z:BirdHeight+1
+
+    ; If the 230 < BirdHeight
+    lda #230
+    cmp z:BirdHeight+1
+    bcc :+
+    jmp @advanceframe
+:   ; Clamp height to 230 and zero out velocity
+    sta z:BirdHeight+1
+    lda #$00
+    sta z:BirdVelocity+0
+    sta z:BirdVelocity+1
+
+@advanceframe:
     dec z:BirdFrameCounter
     bne :+
     inc z:BirdCurrentFrame
@@ -395,7 +426,7 @@ DrawBird:
     ldy #$00 ; sub-tile index
 :
     clc
-    lda z:BirdHeight
+    lda z:BirdHeight+1   ; Higher portion of heigh contains 'whole'
     adc BirdYOffsets, y  ; Offset sprite from object position
     sta oam, x           ; Store Y Component
     inx
@@ -507,8 +538,8 @@ main:
     lda #%00011110
     sta PPUMASK
 
-    lda #$80
-    sta BirdHeight
+    lda #128
+    sta BirdHeight+1
 
 @loopforever:
     jmp @loopforever
