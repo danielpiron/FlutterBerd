@@ -6,6 +6,8 @@ PPUSCRL = $2005
 PPUADDR = $2006
 PPUDATA = $2007
 
+JOYPAD1 = $4016
+
 
     .segment "HEADER"
 
@@ -107,6 +109,7 @@ nmi:
     tya
     pha
 
+    jsr PollController1
     jsr UpdateBird
     jsr DrawBird
 
@@ -185,7 +188,30 @@ PlayFieldGapRadii: .res 16
 BirdHeight: .res 2
 BirdVelocity: .res 2
 
+Controller1: .res 1
+
     .segment "CODE"
+
+; https://wiki.nesdev.com/w/index.php/Controller_reading_code
+; At the same time that we strobe bit 0, we initialize the ring counter
+; so we're hitting two birds with one stone here
+PollController1:
+    lda #$01
+    ; While the strobe bit is set, buttons will be continuously reloaded.
+    ; This means that reading from JOYPAD1 will only return the state of the
+    ; first button: button A.
+    sta JOYPAD1
+    sta Controller1
+    lsr              ; now A is 0
+    ; By storing 0 into JOYPAD1, the strobe bit is cleared and the reloading stops.
+    ; This allows all 8 buttons (newly reloaded) to be read from JOYPAD1.
+    sta JOYPAD1
+loop:
+    lda JOYPAD1
+    lsr              ; bit 0 -> Carry
+    rol Controller1  ; Carry -> bit 0; bit 7 -> Carry
+    bcc loop
+    rts
 
 ; PRNG - https://wiki.nesdev.com/w/index.php/Random_number_generator
 ;
