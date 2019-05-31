@@ -80,6 +80,11 @@ reset:
     inx
     bne @clearsprites
 
+    ; Push sprite data via DMA
+    sty OAMADDR
+    lda #>oam
+    sta $4014
+
     tya  ; At this point A, X, and Y registers are all zero
     ; wait for second vblank
 @vblankwait2:
