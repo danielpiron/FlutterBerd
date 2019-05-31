@@ -107,6 +107,13 @@ nmi:
     tya
     pha
 
+    jsr DrawBird
+
+    ldx #0
+    stx $2003
+    lda #>oam
+    sta $4014
+
     ; Advance scroll position by 1
     clc
     lda z:ScrollPosition+0
@@ -162,6 +169,8 @@ NameTableLow: .res 1
 RNGSeed: .res 2       ; initialize 16-bit seed to any value except 0
 
 ScrollPosition: .res 2
+
+BirdHeight: .res 1
 
 ; Align play field data at a 16 byte boundary, so it's easier to visualize
 ; with a hex editor.
@@ -357,6 +366,36 @@ RenderPipe:
     rts
 ; Ends RenderPipe
 
+DrawBird:
+    ; Bird is made of 4 sprites arranged around its center
+    lda z:BirdHeight
+    tay
+    ; Sprite 0
+    ; y-coordinate
+    sec
+    sbc #$08
+    sta oam+0
+    lda #($80-8)
+
+    ; tile index
+    lda #$00
+    sta oam+1
+
+    ; Attributes
+    lda #$00
+    sta oam+2
+
+    lda #($80-8)
+    sta oam+3
+
+    ; Sprite 0
+
+    ; Sprite 2
+    
+    ; Sprite 3
+
+    rts
+
 main:
     ; set first background
     bit PPUSTAT
@@ -367,12 +406,24 @@ main:
 
     ldx #$01
     stx PPUDATA
-@l1:
+:
     lda PipePalette, x
-    sta $2007
+    sta PPUDATA
     inx
     cpx #$04
-    bne @l1
+    bne :-
+
+    lda #$3F
+    sta PPUADDR
+    lda #$11
+    sta PPUADDR
+    ldx #$01
+:
+    lda BirdPalette, x
+    sta PPUDATA
+    inx
+    cpx #$04
+    bne :-
 
     jsr InitPRNG
     jsr InitPlayField
@@ -430,11 +481,17 @@ main:
     lda #%00011110
     sta PPUMASK
 
+    lda #$80
+    sta BirdHeight
+
 @loopforever:
     jmp @loopforever
     rts
 
 .RODATA
+
+BirdPalette:
+.byte $0F, $0D, $11, $20
 
 PipePalette:
 .byte $0F, $0D, $1A, $20
