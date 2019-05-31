@@ -170,11 +170,14 @@ RNGSeed: .res 2       ; initialize 16-bit seed to any value except 0
 
 ScrollPosition: .res 2
 
+FrameAddress: .res 2
+BirdCurrentFrame: .res 1
+BirdFrameCounter: .res 1
 BirdHeight: .res 1
 
 ; Align play field data at a 16 byte boundary, so it's easier to visualize
 ; with a hex editor.
-Padding: .res 9
+Padding: .res 2
 
 PlayFieldCenters: .res 16
 PlayFieldGapRadii: .res 16
@@ -368,32 +371,36 @@ RenderPipe:
 
 DrawBird:
     ; Bird is made of 4 sprites arranged around its center
-    lda z:BirdHeight
+    ldx z:BirdCurrentFrame
+    lda BirdFramesLo, x
+    sta FrameAddress+0
+    lda BirdFramesHi, x
+    sta FrameAddress+1
 
-    ldx #$00
-    ldy #$00 ; Current OAM
+    ldx #$00 ; Curren OAM
+    ldy #$00 ; sub-tile index
 :
     clc
     lda z:BirdHeight
-    adc BirdYOffsets, x  ; Offset sprite from object position
-    sta oam, y           ; Store Y Component
-    iny
+    adc BirdYOffsets, y  ; Offset sprite from object position
+    sta oam, x           ; Store Y Component
+    inx
 
-    lda BirdTiles, x     ; Tile index
-    sta oam, y
-    iny
+    lda (FrameAddress), y     ; Tile index
+    sta oam, x
+    inx
 
     lda #$00             ; No attributes right now (i.e. no flip/mirror)
-    sta oam, y           ; Palette is 0 (first)
-    iny
+    sta oam, x           ; Palette is 0 (first)
+    inx
 
     lda #$80
-    adc BirdXOffsets, x
-    sta oam, y
-    iny
-
+    adc BirdXOffsets, y
+    sta oam, x
     inx
-    cpx #$04
+
+    iny
+    cpy #$04
     bne :-
 
     rts
@@ -492,12 +499,22 @@ main:
 
 .RODATA
 
+BirdFramesLo:
+    .byte <BirdFrame1, <BirdFrame2, <BirdFrame3, <BirdFrame4
+BirdFramesHi:
+    .byte >BirdFrame1, >BirdFrame2, >BirdFrame3, >BirdFrame4
+
 BirdPalette:
 .byte $0F, $0D, $11, $20
 
-BirdTiles:
-; Frame 1
+BirdFrame1:
     .byte $00, $01, $08, $09
+BirdFrame2:
+    .byte $02, $03, $0A, $0B
+BirdFrame3:
+    .byte $04, $05, $0C, $0D
+BirdFrame4:
+    .byte $06, $07, $0E, $0F
 
 BirdXOffsets:
     .byte $FF+(-8)+1, 0, $FF+(-8)+1, 0
