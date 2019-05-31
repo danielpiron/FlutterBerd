@@ -186,8 +186,8 @@ InitPlayField:
     tax ; Save random value in X
     and #%00000011 ; Take lowest 2 bits (range 0-3)
     clc
-    adc #02        ; Add two to make a 2-5 range for center
-    sta PlayFieldCenters, y
+    adc #02        ; Add two to make a 2-5 range for gap radii
+    sta PlayFieldGapRadii, y
 
     txa ; Restore the randomly generated value
     lsr ; Get the higher nibble
@@ -198,12 +198,45 @@ InitPlayField:
     ; Not clearing the carry flag, because last add
     ; couldn't have possibly set it.
     adc #11        ; Makes a range (11-18)
-    sta PlayFieldGapRadii, y
+    sta PlayFieldCenters, y
 
     iny    ; Skip a space
     iny
     cpy #$10
     bcc :-
+
+    rts
+
+; Render a 4x30 strip of background
+RenderBackground:
+    lda z:PPUCTRLShadow
+    ora #%00000100 ; Set vertical increment mode
+    sta PPUCTRL
+
+    ldy #$00 ; Y indexes the segment of strip we are rendering (0-3)
+@renderstrip:
+    bit PPUSTAT
+    lda NameTableHigh
+    sta PPUADDR
+    lda NameTableLow
+    sta PPUADDR
+
+    ldx #30
+    lda #$00
+: ; Write 30 0s to name table vertically
+    sta PPUDATA
+    dex
+    bne :-
+
+    inc NameTableLow
+    iny
+    cpy #4
+    bcc @renderstrip
+
+    ; We do not change PPUCTRLShadow
+    ; So we can restore PPUCTRL from here
+    lda z:PPUCTRLShadow
+    sta PPUCTRL
 
     rts
 
@@ -262,7 +295,7 @@ RenderPipe:
     sbc z:Center    ; Subtract Center point
     sbc z:GapRadius ; and gap radius
     tax
-    dex             ; Minus -1
+    dex             ; Minus -1 to account for pipe cap
 
     lda PipeShaft, y
 @bottomshaft:
@@ -305,30 +338,51 @@ main:
     jsr InitPRNG
     jsr InitPlayField
 
+    ldx #$08
+@WorldDrawLoop:
     ; Pipe rendering parameters
-    lda #$0F
+    lda z:PlayFieldCenters, x
     sta z:Center
-    lda #$04
+    lda z:PlayFieldGapRadii, x
     sta z:GapRadius
-    lda #$20
-    sta z:NameTableHigh
-    lda #$0A
+
+    ; Calculate starting address of pipe or background
+    txa  ; RenderPipe destroys X
+    pha  ; Save it on stack for later
+    asl  ; X * 4
+    asl  ;
+    ; Y Will contain high name table value
+    cmp #$20       ; If A greater than or equal to 32
+    bcs @selectnt1 ; branch to select name table 1
+    ldy #$20       ; else select name table 0
+    jmp :+
+@selectnt1:
+    ldy #$24  ; nametable 1 starts at $2400 in VRAM
+    and #$1F  ; Clamp to 0-31 range
+:
+    sty z:NameTableHigh
     sta z:NameTableLow
 
+    lda z:GapRadius
+    cmp #$FF
+    bne @willdrawpipe             ; If current Radii is not $ff
+
+    jsr RenderBackground          ; Else draw background
+    jmp @EndsPipeOrBG
+
+@willdrawpipe:
     jsr RenderPipe
 
-    ; Pipe rendering parameters
-    lda #$0A
-    sta z:Center
-    lda #$03
-    sta z:GapRadius
-    lda #$20
-    sta z:NameTableHigh
-    lda #($0A + 8)
-    sta z:NameTableLow
+@EndsPipeOrBG:
 
-    jsr RenderPipe
+    pla  ; Restore X counter
+    tax
 
+    inx
+    cpx #$10
+    bne @WorldDrawLoop
+
+@gitout:
     lda #$00
     sta PPUSCRL
     sta PPUSCRL
