@@ -369,77 +369,32 @@ RenderPipe:
 DrawBird:
     ; Bird is made of 4 sprites arranged around its center
     lda z:BirdHeight
-    tay
-    ; Sprite 0
-    ; y-coordinate
-    sec
-    sbc #$08
-    sta oam+0
 
-    ; tile index
-    lda #$00
-    sta oam+1
+    ldx #$00
+    ldy #$00 ; Current OAM
+:
+    clc
+    lda z:BirdHeight
+    adc BirdYOffsets, x  ; Offset sprite from object position
+    sta oam, y           ; Store Y Component
+    iny
 
-    ; Attributes
-    lda #$00
-    sta oam+2
+    lda BirdTiles, x     ; Tile index
+    sta oam, y
+    iny
 
-    ; x-coordinate
-    lda #($80-8)
-    sta oam+3
+    lda #$00             ; No attributes right now (i.e. no flip/mirror)
+    sta oam, y           ; Palette is 0 (first)
+    iny
 
-    tya
-    ; Sprite 1
-    ; y-coordinate
-    sec
-    sbc #$08
-    sta oam+4
-
-    ; tile index
-    lda #$01
-    sta oam+5
-
-    ; Attributes
-    lda #$00
-    sta oam+6
-
-    ; x-coordinate
-    lda #($80)
-    sta oam+7
-
-    tya
-    ; Sprite 2
-    ; y-coordinate
-    sta oam+8
-
-    ; tile index
-    lda #$08
-    sta oam+9
-
-    ; Attributes
-    lda #$00
-    sta oam+10
-
-    ; x-coordinate
-    lda #($80-8)
-    sta oam+11
-
-    tya
-    ; Sprite 3
-    ; y-coordinate
-    sta oam+12
-
-    ; tile index
-    lda #$09
-    sta oam+13
-
-    ; Attributes
-    lda #$00
-    sta oam+14
-
-    ; x-coordinate
     lda #$80
-    sta oam+15
+    adc BirdXOffsets, x
+    sta oam, y
+    iny
+
+    inx
+    cpx #$04
+    bne :-
 
     rts
 
@@ -539,6 +494,16 @@ main:
 
 BirdPalette:
 .byte $0F, $0D, $11, $20
+
+BirdTiles:
+; Frame 1
+    .byte $00, $01, $08, $09
+
+BirdXOffsets:
+    .byte $FF+(-8)+1, 0, $FF+(-8)+1, 0
+
+BirdYOffsets:
+    .byte $FF+(-8)+1, $FF+(-8)+1, 0, 0
 
 PipePalette:
 .byte $0F, $0D, $1A, $20
