@@ -410,6 +410,10 @@ UpdateBird:
     and #$80              ; If the A key was JUST pressed
     beq :+                ; Skip jump if not pressed
 
+    lda z:BirdVelocity+1
+    cmp #$00
+    bmi :+
+
     lda #$80
     sta z:BirdVelocity+0
     lda #$FC
