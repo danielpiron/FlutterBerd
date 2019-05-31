@@ -107,6 +107,7 @@ nmi:
     tya
     pha
 
+    jsr UpdateBird
     jsr DrawBird
 
     ldx #0
@@ -368,10 +369,23 @@ RenderPipe:
 
     rts
 ; Ends RenderPipe
+;
+UpdateBird:
+
+    dec z:BirdFrameCounter
+    bne :+
+    inc z:BirdCurrentFrame
+    lda #$08
+    sta z:BirdFrameCounter
+:
+    rts
 
 DrawBird:
     ; Bird is made of 4 sprites arranged around its center
-    ldx z:BirdCurrentFrame
+    lda z:BirdCurrentFrame
+    and #$03
+    tax
+
     lda BirdFramesLo, x
     sta FrameAddress+0
     lda BirdFramesHi, x
@@ -406,6 +420,9 @@ DrawBird:
     rts
 
 main:
+    lda #$08
+    sta z:BirdFrameCounter
+
     ; set first background
     bit PPUSTAT
     lda #$3F
