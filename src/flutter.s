@@ -150,6 +150,10 @@ nmi:
     lda #$00       ; No vertical scroll, always 0
     sta PPUSCRL
 
+    ; Save the previous controller state
+    lda z:Controller1
+    sta z:Controller1Prev
+
     pla
     tay
     pla
@@ -189,6 +193,7 @@ BirdHeight: .res 2
 BirdVelocity: .res 2
 
 Controller1: .res 1
+Controller1Prev: .res 1
 
     .segment "CODE"
 
@@ -400,10 +405,21 @@ RenderPipe:
 ;
 UpdateBird:
 
+    lda z:Controller1
+    eor z:Controller1Prev ; Get keys that changed compared to last
+    and #$80              ; If the A key was JUST pressed
+    beq :+                ; Skip jump if not pressed
+
+    lda #$80
+    sta z:BirdVelocity+0
+    lda #$FC
+    sta z:BirdVelocity+1
+
+:
     ; Apply gravity to Bird's Velocity
     clc
     lda z:BirdVelocity+0
-    adc #$20
+    adc #$30
     sta z:BirdVelocity+0
     lda z:BirdVelocity+1
     adc #$00
