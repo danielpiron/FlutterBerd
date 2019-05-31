@@ -102,6 +102,38 @@ nmi:
     tya
     pha
 
+    ; Advance scroll position by 1
+    clc
+    lda z:ScrollPosition+0
+    adc #$01
+    sta z:ScrollPosition+0
+    tax ; Save lower portion for later
+    lda z:ScrollPosition+1
+    adc #$00
+    sta z:ScrollPosition+1
+    tay ; Save upper porition for later
+
+    ; X has latest LO byte of scroll
+    ; y has latest HI byte of scroll
+
+    ; Least significant bit of scroll position HI byte selects the nametable
+
+    lda #%11111100       ; Clear nametable select
+    and z:PPUCTRLShadow  ; portion of PPUCTRLShadow
+    sta z:PPUCTRLShadow  ; and Save
+
+    tya                 ; Restore upper portion of scroll
+    and #%00000001      ; Mask away all except least significant bit
+    ora z:PPUCTRLShadow ; OR with PPUCTRL to set nametable (0: $2000, 1: $2400)
+    sta z:PPUCTRLShadow ; Save PPUTCTRL and set PPUCTRL
+    sta PPUCTRL
+
+    ; Set scroll registers
+    bit PPUSTAT    ; Reset toggle to ensure first write is X
+    stx PPUSCRL    ; X had lower porition from before
+    lda #$00       ; No vertical scroll, always 0
+    sta PPUSCRL
+
     pla
     tay
     pla
@@ -123,6 +155,8 @@ NameTableHigh: .res 1
 NameTableLow: .res 1
 
 RNGSeed: .res 2       ; initialize 16-bit seed to any value except 0
+
+ScrollPosition: .res 2
 
 ; Align play field data at a 16 byte boundary, so it's easier to visualize
 ; with a hex editor.
