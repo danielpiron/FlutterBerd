@@ -375,7 +375,6 @@ DrawBird:
     sec
     sbc #$08
     sta oam+0
-    lda #($80-8)
 
     ; tile index
     lda #$00
@@ -385,14 +384,62 @@ DrawBird:
     lda #$00
     sta oam+2
 
+    ; x-coordinate
     lda #($80-8)
     sta oam+3
 
-    ; Sprite 0
+    tya
+    ; Sprite 1
+    ; y-coordinate
+    sec
+    sbc #$08
+    sta oam+4
 
+    ; tile index
+    lda #$01
+    sta oam+5
+
+    ; Attributes
+    lda #$00
+    sta oam+6
+
+    ; x-coordinate
+    lda #($80)
+    sta oam+7
+
+    tya
     ; Sprite 2
-    
+    ; y-coordinate
+    sta oam+8
+
+    ; tile index
+    lda #$08
+    sta oam+9
+
+    ; Attributes
+    lda #$00
+    sta oam+10
+
+    ; x-coordinate
+    lda #($80-8)
+    sta oam+11
+
+    tya
     ; Sprite 3
+    ; y-coordinate
+    sta oam+12
+
+    ; tile index
+    lda #$09
+    sta oam+13
+
+    ; Attributes
+    lda #$00
+    sta oam+14
+
+    ; x-coordinate
+    lda #$80
+    sta oam+15
 
     rts
 
