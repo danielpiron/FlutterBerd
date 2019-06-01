@@ -129,6 +129,40 @@ nmi:
 
     jsr UpdateBird
     jsr DrawBird
+
+    ; Add a new piece of world every 32 pixels of scroll
+    lda z:ScrollPosition
+    and #$3F ; If our position is multiple of 64 (lowest 5 bits are clear)
+    bne :+
+
+    jsr ScrollPosInNametableSpace ; Get nametable space 0-63
+    lsr                           ; Divide by 4 to get 0-15 range
+    lsr                           ; of world space
+    clc
+    adc #$08                      ; Look ahead 8 spaces
+    and #$0F                      ; % 16 to cause wrap around
+
+    tay                           ; Y has index into playing field
+
+    jsr PRNG
+    tax ; Save random value in X
+    and #%00000011 ; Take lowest 2 bits (range 0-3)
+    clc
+    adc #03        ; Add two to make a 3-6 range for gap radii
+    sta PlayFieldGapRadii, y
+
+    txa ; Restore the randomly generated value
+    lsr ; Get the higher nibble
+    lsr
+    lsr
+    lsr
+    and #%00000111 ; Take lowest 2 bits (range 0-7)
+    ; Not clearing the carry flag, because last add
+    ; couldn't have possibly set it.
+    adc #11        ; Makes a range (11-18)
+    sta PlayFieldCenters, y
+
+:
     jsr UpdateScroll
     jsr DrawWorldStrip
 
