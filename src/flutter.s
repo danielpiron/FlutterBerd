@@ -127,25 +127,13 @@ nmi:
 
     jsr UpdateBird
     jsr DrawBird
+    jsr UpdateScroll
 
+    ; Wrote OAM
     ldx #0
     stx $2003
     lda #>oam
     sta $4014
-
-    ; Advance scroll position by 1
-    clc
-    lda z:ScrollPosition+0
-    adc #$01
-    sta z:ScrollPosition+0
-    tax ; Save lower portion for later
-    lda z:ScrollPosition+1
-    adc #$00
-    sta z:ScrollPosition+1
-    tay ; Save upper porition for later
-
-    ; X has latest LO byte of scroll
-    ; y has latest HI byte of scroll
 
     ; Least significant bit of scroll position HI byte selects the nametable
 
@@ -153,16 +141,17 @@ nmi:
     and z:PPUCTRLShadow  ; portion of PPUCTRLShadow
     sta z:PPUCTRLShadow  ; and Save
 
-    tya                 ; Restore upper portion of scroll
+    lda z:ScrollPosition+1
     and #%00000001      ; Mask away all except least significant bit
     ora z:PPUCTRLShadow ; OR with PPUCTRL to set nametable (0: $2000, 1: $2400)
     sta z:PPUCTRLShadow ; Save PPUTCTRL and set PPUCTRL
     sta PPUCTRL
 
     ; Set scroll registers
-    bit PPUSTAT    ; Reset toggle to ensure first write is X
-    stx PPUSCRL    ; X had lower porition from before
-    lda #$00       ; No vertical scroll, always 0
+    bit PPUSTAT             ; Reset toggle to ensure first write is X
+    lda z:ScrollPosition+0
+    sta PPUSCRL
+    lda #$00                ; No vertical scroll, always 0
     sta PPUSCRL
 
 @nmiend:
@@ -428,7 +417,19 @@ RenderPipe:
 
     rts
 ; Ends RenderPipe
-;
+
+UpdateScroll:
+    ; Advance scroll position by 1
+    clc
+    lda z:ScrollPosition+0
+    adc #$01
+    sta z:ScrollPosition+0
+    lda z:ScrollPosition+1
+    adc #$00
+    sta z:ScrollPosition+1
+    rts
+
+
 UpdateBird:
 
     lda z:Controller1Changed ; And most recently changed buttons
