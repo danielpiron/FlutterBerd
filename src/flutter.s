@@ -297,7 +297,7 @@ InitPlayField:
     tax ; Save random value in X
     and #%00000011 ; Take lowest 2 bits (range 0-3)
     clc
-    adc #02        ; Add two to make a 2-5 range for gap radii
+    adc #03        ; Add two to make a 3-6 range for gap radii
     sta PlayFieldGapRadii, y
 
     txa ; Restore the randomly generated value
