@@ -553,8 +553,9 @@ main:
     lda #$00
     sta PPUADDR
 
+    lda #$01
+    sta PPUDATA
     ldx #$01
-    stx PPUDATA
 :
     lda PipePalette, x
     sta PPUDATA
