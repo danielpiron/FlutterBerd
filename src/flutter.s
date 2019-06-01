@@ -452,6 +452,9 @@ UpdateBird:
     lda #BIRD_FLAPPING
     sta z:BirdState
 
+    lda #01
+    sta z:BirdFrameCounter  ; Immediately go to flap 'blur' frame
+
 :
     ; Apply gravity to Bird's Velocity
     clc
