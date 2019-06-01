@@ -130,6 +130,7 @@ nmi:
     jsr UpdateBird
     jsr DrawBird
     jsr UpdateScroll
+    jsr DrawWorldStrip
 
     ; Wrote OAM
     ldx #0
@@ -311,13 +312,11 @@ InitPlayField:
     rts
 
 ; Render a 4x30 strip of background
-RenderBackground:
+RenderBackgroundStrip:
     lda z:PPUCTRLShadow
     ora #%00000100 ; Set vertical increment mode
     sta PPUCTRL
 
-    ldy #$00 ; Y indexes the segment of strip we are rendering (0-3)
-@renderstrip:
     bit PPUSTAT
     lda NameTableHigh
     sta PPUADDR
@@ -331,11 +330,6 @@ RenderBackground:
     dex
     bne :-
 
-    inc NameTableLow
-    iny
-    cpy #4
-    bcc @renderstrip
-
     ; We do not change PPUCTRLShadow
     ; So we can restore PPUCTRL from here
     lda z:PPUCTRLShadow
@@ -346,15 +340,13 @@ RenderBackground:
 ; RenderPipe
 ; Draws upper and lower pipes (obstacles) starting at name table location specified by
 ; NameTableLow and NameTableHigh. The gap and height are specified by GapRadius and
+; Register Y contains pipe slice segment 0-3
 ; Center respectively. Destroys X, Y, A
-RenderPipe:
+RenderPipeStrip:
     lda z:PPUCTRLShadow
     ora #%00000100 ; Set vertical increment mode
     sta PPUCTRL
 
-    ldy #$00 ; Y indexes the segment of strip we are rendering (0-3)
-; Set starting address within nametable
-@RenderPipeStrip:
     bit PPUSTAT
     lda z:NameTableHigh
     sta PPUADDR
@@ -406,20 +398,13 @@ RenderPipe:
     dex
     bne @bottomshaft
 
-    ; Unless we reach the right edge of the pipe, move onto
-    ; next strip
-    inc z:NameTableLow
-    iny
-    cpy #$04
-    bne @RenderPipeStrip
-
     ; We do not change PPUCTRLShadow
     ; So we can restore PPUCTRL from here
     lda z:PPUCTRLShadow
     sta PPUCTRL
 
     rts
-; Ends RenderPipe
+; Ends RenderPipeStrip
 
 UpdateScroll:
     ; Advance scroll position by 1
@@ -545,6 +530,81 @@ DrawBird:
 
     rts
 
+; Express scroll position as a tile index across the two nametables 0-63
+ScrollPosInNametableSpace:
+    ; Use the 9 least significant bits of the scroll position 0-511
+    ; and express in tile space by dividing by 3
+    lda z:ScrollPosition+1   ; Load hi-byte of scroll position
+    lsr                      ; Shift bit 0 into Carry
+    lda z:ScrollPosition+0   ; Load lo-byte of scroll position
+    ror                      ; Shift once to the right loading carry into bit 7
+    lsr                      ;
+    lsr                      ; A is now (ScrollPosition & 0x1FF) / 8
+
+    rts
+
+;
+; Given X - 0-63 calculate address of top row of nametable
+; Destorys A and X
+SetNametableAddress:
+    txa
+    cmp #$20       ; If A greater than or equal to 32
+    bcs @selectnt1 ; branch to select name table 1
+    ldx #$20       ; else select name table 0
+    jmp :+
+@selectnt1:
+    ldx #$24  ; nametable 1 starts at $2400 in VRAM
+    and #$1F  ; Clamp to 0-31 range
+:
+    stx z:NameTableHigh
+    sta z:NameTableLow
+
+    rts
+
+; Draw an 8x240 pixel slice of the world just ahead of the camera
+DrawWorldStrip:
+
+    jsr ScrollPosInNametableSpace
+    clc
+    adc #$20   ; A + 32 to look one 'screen' ahead
+    and #$3F   ; Take 6 least significant bits for a 0-63 range
+    tay        ; Save A in Y for the next step after this one
+    tax
+    jsr SetNametableAddress ; Set NameTableLow and High according to X
+
+    tya        ; Restore Y
+    ; A can be interpretted as follows
+    ; A - 7 6 5 4 3 2|1 0
+    ;  Bits 2-7 - Index into our Centers and Radii 'world' data
+    ;  Bits 0-1 - Slide number 0-3 of world segment. Each world segment is 4 tiles wide
+    lsr                     ; Divide A by 4
+    lsr                     ;
+    tax                     ; X is now world index 0-15
+
+    tya
+    and #$03                ; Take only 2 least significant bits
+    tay                     ; Y is now which slice of pipe we want to draw
+
+    ; Read Center and Radii data for this segment of world
+    lda z:PlayFieldCenters, x
+    sta z:Center
+    lda z:PlayFieldGapRadii, x
+    sta z:GapRadius
+
+    cmp #$FF
+    bne @willdrawpipe             ; If current Radii is not $ff
+
+    jsr RenderBackgroundStrip
+    jmp @EndsPipeOrBG
+
+@willdrawpipe:
+    jsr RenderPipeStrip
+
+@EndsPipeOrBG:
+
+    rts
+
+
 main:
     lda #$08
     sta z:BirdFrameCounter
@@ -581,51 +641,6 @@ main:
     jsr InitPRNG
     jsr InitPlayField
 
-    ldx #$08
-@WorldDrawLoop:
-    ; Pipe rendering parameters
-    lda z:PlayFieldCenters, x
-    sta z:Center
-    lda z:PlayFieldGapRadii, x
-    sta z:GapRadius
-
-    ; Calculate starting address of pipe or background
-    txa  ; RenderPipe destroys X
-    pha  ; Save it on stack for later
-    asl  ; X * 4
-    asl  ;
-    ; Y Will contain high name table value
-    cmp #$20       ; If A greater than or equal to 32
-    bcs @selectnt1 ; branch to select name table 1
-    ldy #$20       ; else select name table 0
-    jmp :+
-@selectnt1:
-    ldy #$24  ; nametable 1 starts at $2400 in VRAM
-    and #$1F  ; Clamp to 0-31 range
-:
-    sty z:NameTableHigh
-    sta z:NameTableLow
-
-    lda z:GapRadius
-    cmp #$FF
-    bne @willdrawpipe             ; If current Radii is not $ff
-
-    jsr RenderBackground          ; Else draw background
-    jmp @EndsPipeOrBG
-
-@willdrawpipe:
-    jsr RenderPipe
-
-@EndsPipeOrBG:
-
-    pla  ; Restore X counter
-    tax
-
-    inx
-    cpx #$10
-    bne @WorldDrawLoop
-
-@gitout:
     lda #$00
     sta PPUSCRL
     sta PPUSCRL
