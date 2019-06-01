@@ -110,6 +110,21 @@ nmi:
     pha
 
     jsr PollController1
+
+    lda z:Controller1Changed
+    and z:Controller1
+    and #$10
+    beq :+
+
+    ; Toggle pause flag when START is pressed
+    lda z:IsPaused
+    eor #$01
+    sta z:IsPaused
+:
+
+    lda z:IsPaused
+    bne @nmiend
+
     jsr UpdateBird
     jsr DrawBird
 
@@ -150,9 +165,8 @@ nmi:
     lda #$00       ; No vertical scroll, always 0
     sta PPUSCRL
 
-    ; Save the previous controller state
-    lda z:Controller1
-    sta z:Controller1Prev
+@nmiend:
+
 
     pla
     tay
@@ -182,9 +196,11 @@ FrameAddress: .res 2
 BirdCurrentFrame: .res 1
 BirdFrameCounter: .res 1
 
+IsPaused: .res 1
+
 ; Align play field data at a 16 byte boundary, so it's easier to visualize
 ; with a hex editor.
-Padding: .res 2
+Padding: .res 1
 
 PlayFieldCenters: .res 16
 PlayFieldGapRadii: .res 16
@@ -194,6 +210,7 @@ BirdVelocity: .res 2
 
 Controller1: .res 1
 Controller1Prev: .res 1
+Controller1Changed: .res 1
 
     .segment "CODE"
 
@@ -201,21 +218,30 @@ Controller1Prev: .res 1
 ; At the same time that we strobe bit 0, we initialize the ring counter
 ; so we're hitting two birds with one stone here
 PollController1:
+    ; Save the previous controller state
+    lda z:Controller1
+    sta z:Controller1Prev
+
     lda #$01
     ; While the strobe bit is set, buttons will be continuously reloaded.
     ; This means that reading from JOYPAD1 will only return the state of the
     ; first button: button A.
     sta JOYPAD1
-    sta Controller1
+    sta z:Controller1
     lsr              ; now A is 0
     ; By storing 0 into JOYPAD1, the strobe bit is cleared and the reloading stops.
     ; This allows all 8 buttons (newly reloaded) to be read from JOYPAD1.
     sta JOYPAD1
-loop:
+:
     lda JOYPAD1
     lsr              ; bit 0 -> Carry
-    rol Controller1  ; Carry -> bit 0; bit 7 -> Carry
-    bcc loop
+    rol z:Controller1  ; Carry -> bit 0; bit 7 -> Carry
+    bcc :-
+
+    lda z:Controller1
+    eor z:Controller1Prev
+    sta z:Controller1Changed
+
     rts
 
 ; PRNG - https://wiki.nesdev.com/w/index.php/Random_number_generator
@@ -405,10 +431,10 @@ RenderPipe:
 ;
 UpdateBird:
 
-    lda z:Controller1
-    eor z:Controller1Prev ; Get keys that changed compared to last
-    and #$80              ; If the A key was JUST pressed
-    beq :+                ; Skip jump if not pressed
+    lda z:Controller1Changed ; And most recently changed buttons
+    and z:Controller1        ; With buttons currently down
+    and #$80                 ; Test is A was just pressed
+    beq :+                   ; If not pressed skip jump code
 
     lda z:BirdVelocity+1
     cmp #$00
