@@ -8,6 +8,8 @@ PPUDATA = $2007
 
 JOYPAD1 = $4016
 
+BIRD_FLAPPING = 1
+
 
     .segment "HEADER"
 
@@ -194,6 +196,7 @@ Padding: .res 1
 PlayFieldCenters: .res 16
 PlayFieldGapRadii: .res 16
 
+BirdState: .res 1
 BirdHeight: .res 2
 BirdVelocity: .res 2
 
@@ -446,6 +449,9 @@ UpdateBird:
     lda #$FC
     sta z:BirdVelocity+1
 
+    lda #BIRD_FLAPPING
+    sta z:BirdState
+
 :
     ; Apply gravity to Bird's Velocity
     clc
@@ -476,12 +482,25 @@ UpdateBird:
     sta z:BirdVelocity+1
 
 @advanceframe:
+    lda z:BirdState
+    cmp #BIRD_FLAPPING
+    bne @endanimation
+
     dec z:BirdFrameCounter
-    bne :+
+    bne @endanimation
     inc z:BirdCurrentFrame
-    lda #$08
-    sta z:BirdFrameCounter
+
+    lda z:BirdCurrentFrame
+    cmp #$04
+    bne :+
+
+    lda #$00         ; Clear bird state at end of animation
+    sta z:BirdState
+    sta z:BirdCurrentFrame
 :
+    lda #$06    ; Wait 6 frames until next 
+    sta z:BirdFrameCounter
+@endanimation:
     rts
 
 DrawBird:
