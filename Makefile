@@ -3,7 +3,7 @@ srcdir=src
 flutter.nes: flutter.o nes.cfg
 	ld65 -o flutter.nes -C nes.cfg flutter.o
 
-flutter.o: $(srcdir)/flutter.s $(srcdir)/pipe.inc $(srcdir)/bird.inc
+flutter.o: $(srcdir)/flutter.s $(srcdir)/pipe.inc $(srcdir)/bird.inc $(srcdir)/deadbird.inc
 	ca65 $(srcdir)/flutter.s -o flutter.o
 
 $(srcdir)/pipe.inc: assets/FlutterBerd-Pipe.piskel scripts/nesdata.py
@@ -11,6 +11,9 @@ $(srcdir)/pipe.inc: assets/FlutterBerd-Pipe.piskel scripts/nesdata.py
 
 $(srcdir)/bird.inc: assets/FlutterBerd-FlappingAnim.piskel scripts/nesdata.py
 	scripts/nesdata.py assets/FlutterBerd-FlappingAnim.piskel $(srcdir)/bird.inc
+
+$(srcdir)/deadbird.inc: assets/FlutterBerd-DeathAnim.piskel scripts/nesdata.py
+	scripts/nesdata.py assets/FlutterBerd-DeathAnim.piskel $(srcdir)/deadbird.inc
 
 .PHONY: clean
 
