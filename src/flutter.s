@@ -130,6 +130,7 @@ nmi:
 
     jsr UpdateBird
     jsr DrawBird
+    jsr CheckCollision
 
     ; Add a new piece of world every 32 pixels of scroll
     lda z:ScrollPosition
@@ -452,6 +453,58 @@ UpdateScroll:
     sta z:ScrollPosition+1
     rts
 
+CheckCollision:
+
+    jsr ScrollPosInNametableSpace
+    clc                        ; Clear carry flag in anticipation of add
+    adc #$10+1                 ; Offset to middle of screen plus one tile to accont for bird's face
+    and #$3F
+    lsr                        ; There are 4 tiles per pipe
+    lsr                        ; Shift right twice to divide by 4 to get into pipe space
+
+    tax                        ; X now indexes which section of the playfield to bird occupies
+    lda z:PlayFieldCenters, x
+    cmp #$FF                   ; Empty area have Center/Radius set to $FF, collision not possible
+    beq @end                   ; Skip to end and return
+
+
+    sec                        ; Set carry in anticipation of subtraction
+    sbc z:PlayFieldGapRadii, x ; (center - radius)
+    asl                        ; Shift left 3 times to multiply by 8
+    asl                        ; (center - radius) * 8
+    asl                        ; Now we are in pixel space like the bird's height
+
+    adc #$04                   ; Add a little head room to make it a little
+                               ; easier for the player to squeeze thought.
+                               ; NOTE: Carry is not cleared as Center/Radii
+                               ; differences will never be greater than 63
+                               ; top_bound = (center - radius) * 8 + 4
+
+    cmp z:BirdHeight+1         ; if top_bound >= bird_height goto collisiondetected
+    bcs @collisiondetected
+
+    lda z:PlayFieldCenters, x
+    adc z:PlayFieldGapRadii, x
+    asl
+    asl
+    asl
+
+    sec
+    sbc #$04
+
+    cmp z:BirdHeight+1
+    bcc @collisiondetected
+;    beq @collisiondetected
+;
+    jmp @end                   ; No collision occurred
+
+@collisiondetected:
+    lda #01
+    sta z:IsPaused
+
+@end:
+
+    rts
 
 UpdateBird:
 
