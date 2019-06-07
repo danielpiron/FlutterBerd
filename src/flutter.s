@@ -607,6 +607,7 @@ DrawBird:
     sta oam, x           ; Palette is 0 (first)
     inx
 
+    clc
     lda #$80
     adc BirdXOffsets, y
     sta oam, x
