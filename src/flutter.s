@@ -9,6 +9,8 @@ PPUDATA = $2007
 JOYPAD1 = $4016
 
 BIRD_FLAPPING = 1
+BIRD_GLIDING = 2
+BIRD_FALLING = 3
 
 
     .segment "HEADER"
@@ -129,8 +131,8 @@ nmi:
     bne @nmiend
 
     jsr UpdateBird
-    jsr DrawBird
     jsr CheckCollision
+    jsr DrawBird
 
     ; Add a new piece of world every 32 pixels of scroll
     lda z:ScrollPosition
@@ -501,6 +503,8 @@ CheckCollision:
 @collisiondetected:
     lda #01
     sta z:IsPaused
+    lda #04
+    sta z:BirdCurrentFrame
 
 @end:
 
@@ -511,11 +515,11 @@ UpdateBird:
     lda z:Controller1Changed ; And most recently changed buttons
     and z:Controller1        ; With buttons currently down
     and #$80                 ; Test is A was just pressed
-    beq :+                   ; If not pressed skip jump code
+    beq @calculate_physics
 
     lda z:BirdVelocity+1
     cmp #$00
-    bmi :+
+    bmi @calculate_physics
 
     lda #$80
     sta z:BirdVelocity+0
@@ -527,8 +531,10 @@ UpdateBird:
 
     lda #01
     sta z:BirdFrameCounter  ; Immediately go to flap 'blur' frame
+    lsr
+    sta z:BirdCurrentFrame
 
-:
+@calculate_physics:
     ; Apply gravity to Bird's Velocity
     clc
     lda z:BirdVelocity+0
@@ -546,6 +552,28 @@ UpdateBird:
     adc z:BirdVelocity+1
     sta z:BirdHeight+1
 
+    lda z:BirdVelocity+1
+    bne :+
+
+    lda #BIRD_GLIDING
+    sta z:BirdState
+    lda #03
+    sta z:BirdCurrentFrame
+
+:
+    lda #00
+    cmp z:BirdVelocity+1
+    bpl @check_floor
+
+    lda #BIRD_FALLING
+    sta z:BirdState
+    lda z:BirdVelocity+1
+    bmi @check_floor
+
+    lda #00
+    sta z:BirdCurrentFrame
+
+@check_floor:
     ; If the 230 < BirdHeight
     lda #230
     cmp z:BirdHeight+1
@@ -567,12 +595,12 @@ UpdateBird:
     inc z:BirdCurrentFrame
 
     lda z:BirdCurrentFrame
-    cmp #$04
+    cmp #$02
     bne :+
 
     lda #$00         ; Clear bird state at end of animation
     sta z:BirdState
-    sta z:BirdCurrentFrame
+   ; sta z:BirdCurrentFrame
 :
     lda #$06    ; Wait 6 frames until next 
     sta z:BirdFrameCounter
@@ -582,7 +610,6 @@ UpdateBird:
 DrawBird:
     ; Bird is made of 4 sprites arranged around its center
     lda z:BirdCurrentFrame
-    and #$03
     tax
 
     lda BirdFramesLo, x
@@ -748,9 +775,9 @@ main:
 .RODATA
 
 BirdFramesLo:
-    .byte <BirdFrame1, <BirdFrame2, <BirdFrame3, <BirdFrame4
+    .byte <BirdFrame1, <BirdFrame2, <BirdFrame3, <BirdFrame4, <BirdFrame5, <BirdFrame6
 BirdFramesHi:
-    .byte >BirdFrame1, >BirdFrame2, >BirdFrame3, >BirdFrame4
+    .byte >BirdFrame1, >BirdFrame2, >BirdFrame3, >BirdFrame4, >BirdFrame5, >BirdFrame6
 
 BirdPalette:
 .byte $0F, $0D, $11, $20
@@ -763,12 +790,17 @@ BirdFrame3:
     .byte $04, $05, $0C, $0D
 BirdFrame4:
     .byte $06, $07, $0E, $0F
+; Death Frames
+BirdFrame5:
+    .byte $10, $11, $14, $15
+BirdFrame6:
+    .byte $12, $13, $16, $17
 
 BirdXOffsets:
-    .byte $FF+(-8)+1, 0, $FF+(-8)+1, 0
+    .byte (8^$FF)+1, 0, (8^$FF)+1, 0
 
 BirdYOffsets:
-    .byte $FF+(-8)+1, $FF+(-8)+1, 0, 0
+    .byte (8^$FF)+1, (8^$FF)+1, 0, 0
 
 PipePalette:
 .byte $0F, $0D, $1A, $20
