@@ -668,7 +668,7 @@ CheckCollision:
     ; Play 'smack!' sound
     lda #$0f   ; 15 volume, use envelope
     sta $400C
-    lda #$02   ; frequency selector
+    lda #$08   ; frequency selector
     sta $400E
     lda #$00   ; length counter - 0 => 10 (short blip)
     sta $400F
@@ -715,6 +715,19 @@ UpdateBird:
 
     lda #BIRD_FLAPPING
     sta z:BirdState
+
+    ; Play flap sound
+    lda #%10011000
+    sta $4000
+
+    lda #%10111011
+    sta $4001
+
+    lda #$c9 ; Should be G-4 (maybe)
+    sta $4002
+
+    lda #%01110000
+    sta $4003
 
     lda #01
     sta z:BirdFrameCounter  ; Immediately go to flap 'blur' frame
