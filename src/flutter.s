@@ -12,8 +12,9 @@ BIRD_FLAPPING = 1
 BIRD_GLIDING = 2
 BIRD_FALLING = 3
 
-GAME_INIT = 1
-GAME_PLAY = 2
+GAME_INIT  = 1
+GAME_PLAY  = 2
+GAME_SHAKE = 3
 
 
     .segment "HEADER"
@@ -140,7 +141,10 @@ game_logic:
     bne :+
     jmp game_play
 :
-
+    cmp #GAME_SHAKE
+    bne :+
+    jmp game_shake
+:
     ; If no known gamestate is reached then
     ; do nothing and return, so weird stuff
     ; doesn't happen.
@@ -284,6 +288,26 @@ game_play:
 @end:
     rts
 
+game_shake:
+
+    lda z:BirdFrameCounter
+    and #$07
+    tax
+
+    ; Set scroll registers
+    bit PPUSTAT             ; Reset toggle to ensure first write is X
+    lda z:ScrollPosition+0
+
+    clc
+    adc ScreenShake, x
+
+    sta PPUSCRL
+    lda #$00                ; No vertical scroll, always 0
+    sta PPUSCRL
+
+    inc z:BirdFrameCounter
+
+    rts
 
     .segment "ZEROPAGE"
 
@@ -579,8 +603,8 @@ CheckCollision:
     jmp @end                   ; No collision occurred
 
 @collisiondetected:
-    lda #01
-    sta z:IsPaused
+    lda #GAME_SHAKE
+    sta z:GameState
     lda #04
     sta z:BirdCurrentFrame
 
@@ -854,3 +878,7 @@ PipeBottomCap:
 
 PipeTopCap:
 .byte $01, $02, $03, $04
+
+ScreenShake:
+    .byte $02, $03, $04, $03, $02, $01, $00, $01
+
