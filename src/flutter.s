@@ -205,6 +205,9 @@ game_init:
     lda #GAME_PLAY
     sta z:GameState
 
+    lda #$08 ; Enable noise
+    sta $4015
+
     rts
 
 game_play:
@@ -648,6 +651,14 @@ CheckCollision:
     sta z:BirdCurrentFrame
     lda #07
     sta z:BirdFrameCounter
+
+    ; Play 'smack!' sound
+    lda #$0f   ; 15 volume, use envelope
+    sta $400C
+    lda #$02   ; frequency selector
+    sta $400E
+    lda #$00   ; length counter - 0 => 10 (short blip)
+    sta $400F
 
 @end:
 
