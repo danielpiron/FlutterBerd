@@ -205,7 +205,7 @@ game_init:
     lda #GAME_PLAY
     sta z:GameState
 
-    lda #$08 ; Enable noise
+    lda #$09 ; Enable noise and pulse 1
     sta $4015
 
     rts
@@ -331,6 +331,19 @@ game_death:
 
     dec z:BirdFrameCounter
     bne @end
+
+    ; Play falling sound effect
+    lda #$8F   ; Duty Cycle = 10, Volume 15
+    sta $4000
+
+    lda #(($80 | $40) | ($00 | $04)) ; Enable sweep, sweep down period 4, shift 4
+    sta $4001
+
+    lda #$c9 ; Should be G-4 (maybe)
+    sta $4002
+
+    lda #($08 << 3)  ; Length '8', high 3 bits of period = 0
+    sta $4003
 
 @drop:
     jsr BirdPhysics
