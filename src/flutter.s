@@ -15,7 +15,8 @@ BIRD_FALLING = 3
 GAME_INIT  = 1
 GAME_PLAY  = 2
 GAME_SHAKE = 3
-
+GAME_DEATH = 4
+GAME_IDLE = 5
 
     .segment "HEADER"
 
@@ -144,6 +145,10 @@ game_logic:
     cmp #GAME_SHAKE
     bne :+
     jmp game_shake
+:
+    cmp #GAME_DEATH
+    bne :+
+    jmp game_death
 :
     ; If no known gamestate is reached then
     ; do nothing and return, so weird stuff
@@ -305,7 +310,41 @@ game_shake:
     lda #$00                ; No vertical scroll, always 0
     sta PPUSCRL
 
-    inc z:BirdFrameCounter
+    dec z:BirdFrameCounter
+    bne :+
+
+    lda #GAME_DEATH
+    sta z:GameState
+    lda #60
+    sta z:BirdFrameCounter
+:
+    rts
+
+
+game_death:
+
+    lda z:BirdFrameCounter
+    beq @drop
+
+    dec z:BirdFrameCounter
+    bne @end
+
+@drop:
+    jsr BirdPhysics
+    jsr DrawBird
+
+    ; Push sprite data via DMA
+    sty OAMADDR
+    lda #>oam
+    sta $4014
+@end:
+    lda z:BirdHeight+1
+    cmp #248
+    bcc :+
+
+    lda #GAME_IDLE
+    sta z:GameState
+:
 
     rts
 
@@ -607,6 +646,8 @@ CheckCollision:
     sta z:GameState
     lda #04
     sta z:BirdCurrentFrame
+    lda #07
+    sta z:BirdFrameCounter
 
 @end:
 
@@ -880,5 +921,5 @@ PipeTopCap:
 .byte $01, $02, $03, $04
 
 ScreenShake:
-    .byte $02, $03, $04, $03, $02, $01, $00, $01
+    .byte $04, $06, $08, $06, $04, $02, $00, $02
 
