@@ -12,6 +12,9 @@ BIRD_FLAPPING = 1
 BIRD_GLIDING = 2
 BIRD_FALLING = 3
 
+GAME_INIT = 1
+GAME_PLAY = 2
+
 
     .segment "HEADER"
 
@@ -114,6 +117,89 @@ nmi:
     tya
     pha
 
+    jsr game_logic
+
+    pla
+    tay
+    pla
+    tax
+    pla
+    rti
+
+irq:
+    rti
+
+game_logic:
+
+    lda z:GameState
+    cmp #GAME_INIT
+    bne:+
+    jmp game_init
+:
+    cmp #GAME_PLAY
+    bne :+
+    jmp game_play
+:
+
+    ; If no known gamestate is reached then
+    ; do nothing and return, so weird stuff
+    ; doesn't happen.
+    rts
+
+game_init:
+    lda #$08
+    sta z:BirdFrameCounter
+
+    ; set first background
+    bit PPUSTAT
+    lda #$3F
+    sta PPUADDR
+    lda #$00
+    sta PPUADDR
+
+    lda #$01
+    sta PPUDATA
+    ldx #$01
+:
+    lda PipePalette, x
+    sta PPUDATA
+    inx
+    cpx #$04
+    bne :-
+
+    lda #$3F
+    sta PPUADDR
+    lda #$11
+    sta PPUADDR
+    ldx #$01
+:
+    lda BirdPalette, x
+    sta PPUDATA
+    inx
+    cpx #$04
+    bne :-
+
+    jsr InitPRNG
+    jsr InitPlayField
+
+    lda #$00
+    sta PPUSCRL
+    sta PPUSCRL
+
+    ; enable background and sprite rendering
+    lda #%00011110
+    sta PPUMASK
+
+    lda #128
+    sta z:BirdHeight+1
+
+    lda #GAME_PLAY
+    sta z:GameState
+
+    rts
+
+game_play:
+
     jsr PollController1
 
     lda z:Controller1Changed
@@ -128,7 +214,7 @@ nmi:
 :
 
     lda z:IsPaused
-    bne @nmiend
+    bne @end
 
     jsr UpdateBird
     jsr CheckCollision
@@ -195,18 +281,8 @@ nmi:
     lda #$00                ; No vertical scroll, always 0
     sta PPUSCRL
 
-@nmiend:
-
-
-    pla
-    tay
-    pla
-    tax
-    pla
-    rti
-
-irq:
-    rti
+@end:
+    rts
 
 
     .segment "ZEROPAGE"
@@ -234,6 +310,8 @@ Padding: .res 1
 
 PlayFieldCenters: .res 16
 PlayFieldGapRadii: .res 16
+
+GameState: .res 1
 
 BirdState: .res 1
 BirdHeight: .res 2
@@ -510,31 +588,7 @@ CheckCollision:
 
     rts
 
-UpdateBird:
-
-    lda z:Controller1Changed ; And most recently changed buttons
-    and z:Controller1        ; With buttons currently down
-    and #$80                 ; Test is A was just pressed
-    beq @calculate_physics
-
-    lda z:BirdVelocity+1
-    cmp #$00
-    bmi @calculate_physics
-
-    lda #$80
-    sta z:BirdVelocity+0
-    lda #$FC
-    sta z:BirdVelocity+1
-
-    lda #BIRD_FLAPPING
-    sta z:BirdState
-
-    lda #01
-    sta z:BirdFrameCounter  ; Immediately go to flap 'blur' frame
-    lsr
-    sta z:BirdCurrentFrame
-
-@calculate_physics:
+BirdPhysics:
     ; Apply gravity to Bird's Velocity
     clc
     lda z:BirdVelocity+0
@@ -551,6 +605,35 @@ UpdateBird:
     lda z:BirdHeight+1
     adc z:BirdVelocity+1
     sta z:BirdHeight+1
+    rts
+
+
+UpdateBird:
+
+    lda z:Controller1Changed ; And most recently changed buttons
+    and z:Controller1        ; With buttons currently down
+    and #$80                 ; Test is A was just pressed
+    beq :+
+
+    lda z:BirdVelocity+1
+    cmp #$00
+    bmi :+
+
+    lda #$80
+    sta z:BirdVelocity+0
+    lda #$FC
+    sta z:BirdVelocity+1
+
+    lda #BIRD_FLAPPING
+    sta z:BirdState
+
+    lda #01
+    sta z:BirdFrameCounter  ; Immediately go to flap 'blur' frame
+    lsr
+    sta z:BirdCurrentFrame
+
+:
+    jsr BirdPhysics
 
     lda z:BirdVelocity+1
     bne :+
@@ -722,51 +805,8 @@ DrawWorldStrip:
 
 
 main:
-    lda #$08
-    sta z:BirdFrameCounter
-
-    ; set first background
-    bit PPUSTAT
-    lda #$3F
-    sta PPUADDR
-    lda #$00
-    sta PPUADDR
-
-    lda #$01
-    sta PPUDATA
-    ldx #$01
-:
-    lda PipePalette, x
-    sta PPUDATA
-    inx
-    cpx #$04
-    bne :-
-
-    lda #$3F
-    sta PPUADDR
-    lda #$11
-    sta PPUADDR
-    ldx #$01
-:
-    lda BirdPalette, x
-    sta PPUDATA
-    inx
-    cpx #$04
-    bne :-
-
-    jsr InitPRNG
-    jsr InitPlayField
-
-    lda #$00
-    sta PPUSCRL
-    sta PPUSCRL
-
-    ; enable background and sprite rendering
-    lda #%00011110
-    sta PPUMASK
-
-    lda #128
-    sta BirdHeight+1
+    lda #GAME_INIT
+    sta z:GameState
 
 @loopforever:
     jmp @loopforever
