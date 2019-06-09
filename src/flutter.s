@@ -36,7 +36,8 @@ INES_SRAM   = 0 ; 1 = battery backed SRAM at $6000-7FFF
 ; Sprite Tiles
 .include "bird.inc"
 .include "deadbird.inc"
-.res 8 * 2 * (256 - 24)
+.include "digits.inc"
+.res 8 * 2 * (256 - (24 + 11))
 ; Background Tiles
 .res 8 * 2 ; One blank tile at index 0
 .include "pipe.inc"
@@ -188,6 +189,9 @@ game_init:
     cpx #$04
     bne :-
 
+    lda #%00000000
+    sta PPUMASK
+
     jsr InitPRNG
     jsr InitPlayField
 
@@ -231,6 +235,7 @@ game_play:
     jsr UpdateBird
     jsr CheckCollision
     jsr DrawBird
+    jsr DrawScore
 
     ; Add a new piece of world every 32 pixels of scroll
     lda z:ScrollPosition
@@ -399,6 +404,9 @@ BirdVelocity: .res 2
 Controller1: .res 1
 Controller1Prev: .res 1
 Controller1Changed: .res 1
+
+Score: .res 3
+ScorePos: .res 1
 
     .segment "CODE"
 
@@ -716,6 +724,8 @@ UpdateBird:
     lda #BIRD_FLAPPING
     sta z:BirdState
 
+    jsr increment_score
+
     ; Play flap sound
     lda #%10011000
     sta $4000
@@ -829,6 +839,62 @@ DrawBird:
     cpy #$04
     bne :-
 
+    rts
+
+increment_score:
+    clc
+    lda #$00
+    tax
+@loop:
+    adc Score, x
+    adc ONE, x
+    cmp #10
+    bcc @next_digit
+
+    sbc #10
+
+@next_digit:
+    sta Score, x
+    lda #$00
+    rol
+    inx
+    cpx #3
+    bcc @loop
+    rts
+
+DrawScore:
+
+    lda #240
+    sta z:ScorePos
+
+    ldy #$00 ; Ones place digit
+:
+    lda #$08             ; Draw at top, which is actually 8 pixels down (I think)
+    sta oam, x           ; Store Y Component
+    inx
+
+    clc
+    lda #24              ; 0 is tile 24
+    adc Score, y         ; Add the digit to get the right character
+    sta oam, x
+    inx
+
+    lda #$00             ; No attributes right now (i.e. no flip/mirror)
+    sta oam, x           ; Palette is 0 (first)
+    inx
+
+    lda z:ScorePos       ; X Position
+    sta oam, x
+    inx
+
+    sec
+    sbc #$08             ; SCorePos - 8
+    sta z:ScorePos
+
+    iny
+
+    cpy #$03
+    bne :-
     rts
 
 ; Express scroll position as a tile index across the two nametables 0-63
@@ -960,3 +1026,5 @@ PipeTopCap:
 ScreenShake:
     .byte $04, $06, $08, $06, $04, $02, $00, $02
 
+ONE:
+    .byte $01, $00, $00
