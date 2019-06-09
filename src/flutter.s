@@ -387,10 +387,7 @@ BirdCurrentFrame: .res 1
 BirdFrameCounter: .res 1
 
 IsPaused: .res 1
-
-; Align play field data at a 16 byte boundary, so it's easier to visualize
-; with a hex editor.
-Padding: .res 1
+InBetweenPipes: .res 1
 
 PlayFieldCenters: .res 16
 PlayFieldGapRadii: .res 16
@@ -632,9 +629,20 @@ CheckCollision:
     tax                        ; X now indexes which section of the playfield to bird occupies
     lda z:PlayFieldCenters, x
     cmp #$FF                   ; Empty area have Center/Radius set to $FF, collision not possible
-    beq @end                   ; Skip to end and return
+    bne @checkpipes            ; If not empty check pipes
 
+    lda z:InBetweenPipes
+    beq @end
 
+    ; If we were JUST inbetween pipes in the last frame, increment score
+    jsr increment_score
+    ; Probably should play a little jingle
+    lda #$00
+    sta z:InBetweenPipes
+
+    jmp @end
+
+@checkpipes:
     sec                        ; Set carry in anticipation of subtraction
     sbc z:PlayFieldGapRadii, x ; (center - radius)
     asl                        ; Shift left 3 times to multiply by 8
@@ -661,8 +669,10 @@ CheckCollision:
 
     cmp z:BirdHeight+1
     bcc @collisiondetected
-;    beq @collisiondetected
-;
+
+    lda #$01
+    sta z:InBetweenPipes
+
     jmp @end                   ; No collision occurred
 
 @collisiondetected:
@@ -723,8 +733,6 @@ UpdateBird:
 
     lda #BIRD_FLAPPING
     sta z:BirdState
-
-    jsr increment_score
 
     ; Play flap sound
     lda #%10011000
