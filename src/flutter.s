@@ -192,12 +192,20 @@ game_init:
     lda #%00000000
     sta PPUMASK
 
-    jsr InitPRNG
     jsr InitPlayField
+    jsr ClearScreen
 
     lda #$00
     sta PPUSCRL
     sta PPUSCRL
+    sta z:ScrollPosition
+    sta z:ScrollPosition+1
+    sta z:BirdVelocity
+    sta z:BirdVelocity+1
+    sta z:Score
+    sta z:Score+1
+    sta z:Score+2
+    sta z:InBetweenPipes
 
     ; enable background and sprite rendering
     lda #%00011110
@@ -363,7 +371,7 @@ game_death:
     cmp #248
     bcc :+
 
-    lda #GAME_IDLE
+    lda #GAME_INIT
     sta z:GameState
 :
 
@@ -508,6 +516,40 @@ InitPlayField:
     iny
     cpy #$10
     bcc :-
+
+    rts
+
+ClearScreen:
+; Clear the first Nametable to all zeros
+
+
+    lda z:PPUCTRLShadow
+    ora #%00000100 ; Set vertical increment mode
+    sta PPUCTRL
+
+    ldx #00
+@column:
+    bit PPUSTAT
+    lda #$20
+    sta PPUADDR
+    stx PPUADDR
+
+    lda #00
+    ldy #30
+:
+    sta PPUDATA
+
+    dey
+    bne :-
+
+    inx
+    cpx #$20
+    bne @column
+
+    ; We do not change PPUCTRLShadow
+    ; So we can restore PPUCTRL from here
+    lda z:PPUCTRLShadow
+    sta PPUCTRL
 
     rts
 
@@ -682,6 +724,12 @@ CheckCollision:
     sta z:BirdCurrentFrame
     lda #07
     sta z:BirdFrameCounter
+
+    ; Give the bird a little bop up before falling to its doom
+    lda #$10
+    sta z:BirdVelocity+0
+    lda #$FD
+    sta z:BirdVelocity+1
 
     ; Play 'smack!' sound
     lda #$0f   ; 15 volume, use envelope
@@ -981,6 +1029,7 @@ DrawWorldStrip:
 
 
 main:
+    jsr InitPRNG
     lda #GAME_INIT
     sta z:GameState
 
