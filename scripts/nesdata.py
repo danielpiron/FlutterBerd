@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import tiler
+
 from PIL import Image
 import base64
 import io
@@ -163,16 +165,19 @@ if __name__ == '__main__':
         colors = [color for color, _ in sorted(colormap.items(), key=lambda x: x[1])]
 
         width, height = img.size
-        tiledata = []
+        tiledata = tiler.Tiler(width // 8, height // 8)
         for top in range(0, height, 8):
             for left in range(0, width, 8):
                 bitmap = extract_8x8_tile_from_image(img, (left, top), colormap)
-                tiledata.append(bitmap)
+                tiledata.add_tile(bitmap, left // 8, top // 8)
 
         with open(outfile, 'w') as out:
-            out.write('; {} tiles'.format(len(tiledata)))
+            tileset = tiledata.get_tileset()
+            out.write('; {} tiles'.format(len(tileset)))
             out.write('\n')
             out.write('; Palette - ' + as_ca65_byte_definition(colors_as_nes_palette_values(colors)))
             out.write('\n')
             out.write('\n'.join(as_ca65_byte_definition(bitmap_to_nes_tile(bitmap))
-                                for bitmap in tiledata))
+                                for bitmap in tileset))
+            out.write('\n')
+            out.write('\n'.join('; Tileset Row {} - {}'.format(row_index, as_ca65_byte_definition(row)) for row_index, row in enumerate(tiledata.get_tilemap())))
