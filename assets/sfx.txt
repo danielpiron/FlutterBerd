@@ -1,0 +1,43 @@
+# FamiTracker text export 0.4.2
+
+# Song information
+TITLE           "Chime"
+AUTHOR          "Daniel Piron"
+COPYRIGHT       "2019"
+
+# Song comment
+COMMENT ""
+
+# Global settings
+MACHINE         0
+FRAMERATE       0
+EXPANSION       0
+VIBRATO         1
+SPLIT           32
+
+# Macros
+MACRO       4   0  -1  -1   0 : 2
+
+# DPCM samples
+
+# Instruments
+INST2A03   0    -1  -1  -1  -1   0 "50% Square"
+
+# Tracks
+
+TRACK   8   3 150 "New song"
+COLUMNS : 1 1 1 1 1
+
+ORDER 00 : 00 00 00 00 00
+
+PATTERN 00
+ROW 00 : C-5 00 . ... : ... .. . ... : ... .. . ... : ... .. . ... : ... .. . ...
+ROW 01 : A-4 00 . ... : ... .. . ... : ... .. . ... : ... .. . ... : ... .. . ...
+ROW 02 : G-4 00 . ... : ... .. . ... : ... .. . ... : ... .. . ... : ... .. . ...
+ROW 03 : E-4 00 . ... : ... .. . ... : ... .. . ... : ... .. . ... : ... .. . ...
+ROW 04 : C-5 00 . ... : ... .. . ... : ... .. . ... : ... .. . ... : ... .. . ...
+ROW 05 : ... .. . ... : ... .. . ... : ... .. . ... : ... .. . ... : ... .. . ...
+ROW 06 : --- 00 . ... : ... .. . ... : ... .. . ... : ... .. . ... : ... .. . ...
+ROW 07 : ... .. . ... : ... .. . ... : ... .. . ... : ... .. . ... : ... .. . ...
+
+# End of export
