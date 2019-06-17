@@ -89,6 +89,3 @@ if __name__ == '__main__':
     print('Dimensions: {}x{}'.format(p.width, p.height))
     print('FPS:', p.fps)
     print('Frames:', p.frame_count)
-    
-    
-
