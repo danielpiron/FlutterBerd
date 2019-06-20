@@ -1,10 +1,13 @@
 srcdir=src
 
-flutter.nes: flutter.o nes.cfg
-	ld65 -o flutter.nes -C nes.cfg flutter.o
+flutter.nes: gfx.o flutter.o nes.cfg
+	ld65 -o flutter.nes -C nes.cfg flutter.o gfx.o
 
-flutter.o: $(srcdir)/flutter.s $(srcdir)/pipe.inc $(srcdir)/bird.inc $(srcdir)/deadbird.inc $(srcdir)/digits.inc
+flutter.o: $(srcdir)/flutter.s
 	ca65 $(srcdir)/flutter.s -o flutter.o
+
+gfx.o: $(srcdir)/gfx.s $(srcdir)/pipe.inc $(srcdir)/bird.inc $(srcdir)/deadbird.inc $(srcdir)/digits.inc
+	ca65 $(srcdir)/gfx.s -o gfx.o
 
 $(srcdir)/pipe.inc: assets/FlutterBerd-Pipe.piskel scripts/nesdata.py
 	scripts/nesdata.py assets/FlutterBerd-Pipe.piskel $(srcdir)/pipe.inc
