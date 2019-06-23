@@ -8,7 +8,6 @@ import io
 
 class Piskel:
 
-
     class Layer:
 
         def __init__(self, frame_width, frame_height, json_text):
@@ -89,3 +88,11 @@ if __name__ == '__main__':
     print('Dimensions: {}x{}'.format(p.width, p.height))
     print('FPS:', p.fps)
     print('Frames:', p.frame_count)
+
+    SCALE = 20
+    gif_size = (p.width * 20, p.height * 20)
+    bg = Image.new('RGBA', gif_size, color=(128, 255, 128, 255))
+
+    for idx, frame in enumerate(p.frames):
+        scaled_frame = frame.resize(gif_size, Image.NEAREST)
+        Image.composite(scaled_frame, bg, scaled_frame).save('frame{}.png'.format(idx))
