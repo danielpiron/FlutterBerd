@@ -184,9 +184,17 @@ if __name__ == '__main__':
         metatiles.append(tiledata)
 
     data = {
-        'tiles': tileset.as_list(),
-        'palette': sorted(colormap.keys()),
-        'metatiles': [m.get_tilemap() for m in metatiles]
+        'tileset': tileset.as_list(),
+        'graphics': [
+            {
+            'name': p.name,
+            'palette': sorted(colormap.keys()),
+            'metatiles': [{
+                    'name': 'frame_{}'.format(frame_no),
+                    'indicies': m.get_tilemap()
+                } for frame_no, m in enumerate(metatiles)]
+            }
+        ]
     }
 
     pp(data)
