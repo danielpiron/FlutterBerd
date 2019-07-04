@@ -153,12 +153,7 @@ def as_ca65_byte_definition(numbers):
     return '.byte ' + ', '.join('$' + format(b, '02X') for b in numbers)
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='A .piskel to NES metatile compiler')
-    parser.add_argument('piskel_files', type=str, nargs='+', help='Files to be compiled')
-    parser.add_argument('-o', dest='output', help='.s containing compiled CHR data and metatiles')
-    args = parser.parse_args()
-
+def compile_piskel_files(piskel_files):
     graphics = []
     tileset = tiler.Tileset()  # Tileset to be shared across all files
     for infile in args.piskel_files:
@@ -171,8 +166,6 @@ if __name__ == '__main__':
 
         # Transparency may or may not be part of frame_colors. Add it in as
         # the NES always has a transparent 'color' with an index of 0
-        from pprint import pprint as pp
-
         frame_colors.add((0, 0, 0, 0))
         assert(len(frame_colors) <= 4)
 
@@ -198,9 +191,17 @@ if __name__ == '__main__':
                          for frame_no, m in enumerate(metatiles)]
             })
 
-    data = {
-        'tileset': tileset.as_list(),
-        'graphics': graphics
-    }
+    return {
+            'tileset': tileset.as_list(),
+            'graphics': graphics
+            }
 
-    pp(data)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='A .piskel to NES metatile compiler')
+    parser.add_argument('piskel_files', type=str, nargs='+', help='Files to be compiled')
+    parser.add_argument('-o', dest='output', help='.s containing compiled CHR data and metatiles')
+    args = parser.parse_args()
+
+    from pprint import pprint as pp
+    pp(compile_piskel_files(args.piskel_files))
