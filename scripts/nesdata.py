@@ -2,6 +2,7 @@
 import piskel
 import tiler
 
+import argparse
 import base64
 import io
 import json
@@ -99,6 +100,7 @@ def bitmap_to_nes_tile(bitmap):
         for row in bitmap:
             yield extract_nth_bits(row, bitplane)
 
+
 def extract_8x8_bitmap_from_image(img, upperleft, colormap):
     x1, y1 = upperleft
     x2, y2 = x1 + 8, y1 + 8
@@ -152,49 +154,53 @@ def as_ca65_byte_definition(numbers):
 
 
 if __name__ == '__main__':
-    infile = sys.argv[1]
-    outfile = sys.argv[2]
+    parser = argparse.ArgumentParser(description='A .piskel to NES metatile compiler')
+    parser.add_argument('piskel_files', type=str, nargs='+', help='Files to be compiled')
+    parser.add_argument('-o', dest='output', help='.s containing compiled CHR data and metatiles')
+    args = parser.parse_args()
 
-    p = piskel.Piskel(infile)
+    graphics = []
+    tileset = tiler.Tileset()  # Tileset to be shared across all files
+    for infile in args.piskel_files:
 
-    frame_colors = set()
-    for frame in p.frames:
-        frame_colors.update(c[1] for c in frame.getcolors())
+        p = piskel.Piskel(infile)
 
-    # Transparency may or may not be part of frame_colors. Add it in as
-    # the NES always has a transparent 'color' with an index of 0
-    from pprint import pprint as pp
+        frame_colors = set()
+        for frame in p.frames:
+            frame_colors.update(c[1] for c in frame.getcolors())
 
-    frame_colors.add((0, 0, 0, 0))
-    assert(len(frame_colors) <= 4)
+        # Transparency may or may not be part of frame_colors. Add it in as
+        # the NES always has a transparent 'color' with an index of 0
+        from pprint import pprint as pp
 
-    # Since transparency is (0, 0, 0, 0), it will always occupy the 0
-    # index of the colormap when frame_colors is sorted.
-    colormap = {rgba : idx for idx, rgba in enumerate(sorted(frame_colors))}
+        frame_colors.add((0, 0, 0, 0))
+        assert(len(frame_colors) <= 4)
 
-    tileset = tiler.Tileset()
+        # Since transparency is (0, 0, 0, 0), it will always occupy the 0
+        # index of the colormap when frame_colors is sorted.
+        colormap = {rgba : idx for idx, rgba in enumerate(sorted(frame_colors))}
 
-    metatiles = []
-    for frame in p.frames:
-        tiledata = tiler.Tiler(p.width // 8, p.height // 8, tileset)
-        for top in range(0, p.height, 8):
-            for left in range(0, p.width, 8):
-                bitmap = extract_8x8_bitmap_from_image(frame, (left, top), colormap)
-                tiledata.place_tile(bitmap, left // 8, top // 8)
-        metatiles.append(tiledata)
+
+        metatiles = []
+        for frame in p.frames:
+            tiledata = tiler.Tiler(p.width // 8, p.height // 8, tileset)
+            for top in range(0, p.height, 8):
+                for left in range(0, p.width, 8):
+                    bitmap = extract_8x8_bitmap_from_image(frame, (left, top), colormap)
+                    tiledata.place_tile(bitmap, left // 8, top // 8)
+            metatiles.append(tiledata)
+
+        graphics.append({
+            'name': p.name,
+            'palette': sorted(colormap.keys()),
+            'metatiles': [{'name': 'frame_{}'.format(frame_no),
+                          'indicies': m.get_tilemap()}
+                         for frame_no, m in enumerate(metatiles)]
+            })
 
     data = {
         'tileset': tileset.as_list(),
-        'graphics': [
-            {
-            'name': p.name,
-            'palette': sorted(colormap.keys()),
-            'metatiles': [{
-                    'name': 'frame_{}'.format(frame_no),
-                    'indicies': m.get_tilemap()
-                } for frame_no, m in enumerate(metatiles)]
-            }
-        ]
+        'graphics': graphics
     }
 
     pp(data)
