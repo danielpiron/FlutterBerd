@@ -32,18 +32,6 @@ INES_SRAM   = 0 ; 1 = battery backed SRAM at $6000-7FFF
 .byte $0, $0, $0, $0, $0, $0, $0, $0 ; padding
 
 
-    .segment "TILES"
-; Sprite Tiles
-.include "bird.inc"
-.include "deadbird.inc"
-.include "digits.inc"
-.res 8 * 2 * (256 - (24 + 11))
-; Background Tiles
-.res 8 * 2 ; One blank tile at index 0
-.include "pipe.inc"
-.res 8 * 2 * (256 - 21)
-
-
     .segment "VECTORS"
 .word nmi
 .word reset

@@ -150,7 +150,7 @@ def colors_as_nes_palette_values(colors):
 
 
 def as_ca65_byte_definition(numbers):
-    return '.byte ' + ', '.join('$' + format(b, '02X') for b in numbers)
+    return '    .byte ' + ', '.join('$' + format(b, '02X') for b in numbers)
 
 
 def compile_piskel_files(piskel_files):
@@ -187,7 +187,7 @@ def compile_piskel_files(piskel_files):
             'name': p.name,
             'palette': sorted(colormap.keys()),
             'metatiles': [{'name': 'frame_{}'.format(frame_no),
-                          'indicies': m.get_tilemap()}
+                          'indices': m.get_tilemap()}
                          for frame_no, m in enumerate(metatiles)]
             })
 
@@ -201,7 +201,34 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='A .piskel to NES metatile compiler')
     parser.add_argument('piskel_files', type=str, nargs='+', help='Files to be compiled')
     parser.add_argument('-o', dest='output', help='.s containing compiled CHR data and metatiles')
+    parser.add_argument('--segment', default='CHR0')
     args = parser.parse_args()
 
-    from pprint import pprint as pp
-    pp(compile_piskel_files(args.piskel_files))
+    data = compile_piskel_files(args.piskel_files)
+
+    output = ['.segment "{}"'.format(args.segment)]
+    output.extend(as_ca65_byte_definition(bitmap_to_nes_tile(bitmap))
+                  for bitmap in data['tileset'])
+    # Add padding at the end
+    output.append('.res 16 * {}  ; Pad remaining data'.format(256 - len(data['tileset'])))
+
+
+    output.append('.segment "RODATA"')
+    for graphic in sorted(data['graphics'], key=lambda g: g['name']):
+        name = graphic['name'].lower().replace('-', '_').replace(' ', '_')
+        output.append(name + ':')
+
+        for metatile in graphic['metatiles']:
+            if len(graphic['metatiles']) > 1:
+                output.append('{}_{}:'.format(name, metatile['name']))
+            for row, indices in enumerate(metatile['indices']):
+                output.append('{}  ; row {}'.format(as_ca65_byte_definition(indices), row))
+
+        output.append(name + '_palette:')
+        output.append(as_ca65_byte_definition(colors_as_nes_palette_values(graphic['palette'])))
+
+
+    labels = [line[:-1] for line in output if line.endswith(':')]
+    output.append('.export ' + ', '.join(labels))
+
+    print('\n'.join(output))
