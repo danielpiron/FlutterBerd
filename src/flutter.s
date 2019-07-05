@@ -37,6 +37,7 @@ INES_SRAM   = 0 ; 1 = battery backed SRAM at $6000-7FFF
 .word reset
 .word irq
 
+.import numerals
 
     .segment "OAM"
 oam: .res 256        ; sprite OAM data to be uploaded by DMA
@@ -918,7 +919,7 @@ DrawScore:
     inx
 
     clc
-    lda #24              ; 0 is tile 24
+    lda numerals
     adc Score, y         ; Add the digit to get the right character
     sta oam, x
     inx
