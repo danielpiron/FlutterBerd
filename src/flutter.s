@@ -1028,27 +1028,23 @@ main:
 
 .RODATA
 
+.import bird_flapping_frame_0
+.import bird_flapping_frame_1
+.import bird_flapping_frame_2
+.import bird_flapping_frame_3
+
+.import bird_death_frame_0
+.import bird_death_frame_1
+
 BirdFramesLo:
-    .byte <BirdFrame1, <BirdFrame2, <BirdFrame3, <BirdFrame4, <BirdFrame5, <BirdFrame6
+    .byte <bird_flapping_frame_0, <bird_flapping_frame_1, <bird_flapping_frame_2, <bird_flapping_frame_3
+    .byte <bird_death_frame_0, <bird_death_frame_1
 BirdFramesHi:
-    .byte >BirdFrame1, >BirdFrame2, >BirdFrame3, >BirdFrame4, >BirdFrame5, >BirdFrame6
+    .byte >bird_flapping_frame_0, >bird_flapping_frame_1, >bird_flapping_frame_2, >bird_flapping_frame_3
+    .byte >bird_death_frame_0, >bird_death_frame_1
 
 BirdPalette:
 .byte $0F, $0D, $11, $20
-
-BirdFrame1:
-    .byte $00, $01, $08, $09
-BirdFrame2:
-    .byte $02, $03, $0A, $0B
-BirdFrame3:
-    .byte $04, $05, $0C, $0D
-BirdFrame4:
-    .byte $06, $07, $0E, $0F
-; Death Frames
-BirdFrame5:
-    .byte $10, $11, $14, $15
-BirdFrame6:
-    .byte $12, $13, $16, $17
 
 BirdXOffsets:
     .byte (8^$FF)+1, 0, (8^$FF)+1, 0
