@@ -183,6 +183,7 @@ game_init:
 
     jsr InitPlayField
     jsr ClearScreen
+    jsr DrawTitle
 
     lda #$00
     sta PPUSCRL
@@ -402,6 +403,8 @@ Controller1Changed: .res 1
 Score: .res 3
 ScorePos: .res 1
 
+Temp: .res 1
+
     .segment "CODE"
 
 ; https://wiki.nesdev.com/w/index.php/Controller_reading_code
@@ -539,6 +542,45 @@ ClearScreen:
     ; So we can restore PPUCTRL from here
     lda z:PPUCTRLShadow
     sta PPUCTRL
+
+    rts
+
+.import title_screen
+DrawTitle:
+
+    lda #$20
+    sta NameTableHigh
+    lda #$84
+    sta NameTableLow
+
+    lda #11
+    sta Temp
+    ldx #0
+@loop:
+    bit PPUSTAT
+    lda NameTableHigh
+    sta PPUADDR
+    lda NameTableLow
+    sta PPUADDR
+
+    ldy #21
+@print:
+    lda title_screen, x
+    sta PPUDATA
+    inx
+    dey
+    bne @print
+
+    lda NameTableLow
+    clc
+    adc #$20
+    sta NameTableLow
+    lda NameTableHigh
+    adc #$0
+    sta NameTableHigh
+
+    dec Temp
+    bne @loop
 
     rts
 
