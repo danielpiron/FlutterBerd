@@ -15,8 +15,8 @@ chr1.o: $(srcdir)/chr1.s
 $(srcdir)/chr0.s: assets/FlutterBerd-FlappingAnim.piskel assets/FlutterBerd-DeathAnim.piskel assets/FlutterBerd-Numerals.piskel
 	scripts/nesdata.py assets/FlutterBerd-FlappingAnim.piskel assets/FlutterBerd-DeathAnim.piskel assets/FlutterBerd-Numerals.piskel --segment CHR0 > $(srcdir)/chr0.s
 
-$(srcdir)/chr1.s: assets/FlutterBerd-Pipe.piskel assets/FlutterBerd-TitleScreen.piskel
-	scripts/nesdata.py assets/FlutterBerd-Pipe.piskel assets/FlutterBerd-TitleScreen.piskel --segment CHR1 > $(srcdir)/chr1.s
+$(srcdir)/chr1.s: assets/transparency.piskel assets/FlutterBerd-Pipe.piskel assets/FlutterBerd-TitleScreen.piskel
+	scripts/nesdata.py assets/transparency.piskel assets/FlutterBerd-Pipe.piskel assets/FlutterBerd-TitleScreen.piskel --segment CHR1 > $(srcdir)/chr1.s
 
 .PHONY: clean
 
