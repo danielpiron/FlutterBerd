@@ -231,4 +231,5 @@ if __name__ == '__main__':
     labels = [line[:-1] for line in output if line.endswith(':')]
     output.append('.export ' + ', '.join(labels))
 
-    print('\n'.join(output))
+    with open(args.output, 'w') as out:
+        out.write('\n'.join(output))
